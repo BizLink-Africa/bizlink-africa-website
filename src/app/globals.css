@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 @theme inline {
   /* BizLink Africa Design Tokens */
@@ -112,4 +112,21 @@ body {
 ::selection {
   background-color: var(--color-primary-fixed);
   color: var(--color-on-primary-fixed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .tech-flow-line::after {
+    animation: none;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

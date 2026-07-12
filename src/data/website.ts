@@ -2,23 +2,23 @@ export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Our Solutions', href: '/solutions' },
   { label: 'Partnership Approach', href: '/partnership' },
-  { label: 'Contact Us', href: '/contact' },
   { label: 'Client Portal', href: '/client-portal' },
+  { label: 'Contact Us', href: '/contact' },
 ];
 
 export const COMPANY = {
   name: 'BizLink Africa Limited',
   shortName: 'BizLink Africa',
   address: 'Temboni, Ubungo, Dar es Salaam, Tanzania',
-  emailGeneral: 'info@bizlinkafrica.co.tz',
-  emailSupport: 'support@bizlinkafrica.co.tz',
+  emailGeneral: 'info@bizlinkafrica.net',
+  emailSupport: 'support@bizlinkafrica.net',
   whatsapp: '+255 624 239 712',
   whatsappLink: 'https://wa.me/255624239712',
   copyright: '© 2026 BizLink Africa Limited. All Rights Reserved.',
 };
 
 export const COMPLIANCE_TEXT =
-  'BizLink Africa Limited provides ICT infrastructure, automation systems, and integration support. BizLink Africa Limited does not hold, receive, control, or settle client funds. Payment collection and settlement are handled directly between each client and the approved payment partner.';
+  'BizLink Africa Limited provides ICT infrastructure, automation systems, and integration support only. BizLink Africa Limited does not hold, receive, control, or settle client funds. Payment collection and settlement are handled directly between each client and the approved payment partner.';
 
 export const SOLUTIONS = [
   {
@@ -86,6 +86,116 @@ export const SOLUTIONS = [
       'Ongoing technical advisory and support',
     ],
   },
+  {
+    id: 'whatsapp-business',
+    icon: 'MessageCircle',
+    title: 'WhatsApp Business API Integration',
+    description:
+      'Connect your business to the official WhatsApp Business API for professional, scalable messaging — bulk notifications, automated replies, and customer engagement at scale.',
+    features: [
+      'Official WhatsApp Business API setup and integration',
+      'Bulk messaging campaigns and broadcast lists',
+      'Automated order confirmations and delivery alerts',
+      'Customer engagement chatbots within WhatsApp',
+    ],
+  },
+  {
+    id: 'ecommerce',
+    icon: 'ShoppingCart',
+    title: 'E-Commerce & Online Store Setup',
+    description:
+      'Build and launch professional online stores with product catalogues, order management, and seamless payment integration support.',
+    features: [
+      'Custom online store design and deployment',
+      'Product catalogue and inventory management',
+      'Order tracking and customer notification workflows',
+      'Integration with social channels and payment infrastructure',
+    ],
+  },
+  {
+    id: 'crm-automation',
+    icon: 'Users',
+    title: 'CRM & Customer Data Automation',
+    description:
+      'Manage customer relationships, segment audiences, and automate follow-ups so no lead or client falls through the cracks.',
+    features: [
+      'Centralized customer database and history tracking',
+      'Automated follow-up sequences and reminders',
+      'Customer segmentation and targeted messaging',
+      'Lead pipeline management and conversion tracking',
+    ],
+  },
+  {
+    id: 'system-integration',
+    icon: 'ArrowRightLeft',
+    title: 'System & API Integration',
+    description:
+      'Connect your existing tools, apps, and databases — ERPs, POS systems, delivery platforms, and third-party APIs — into one seamless workflow.',
+    features: [
+      'ERP, POS, and accounting system integration',
+      'Third-party API connections and data sync',
+      'Delivery and logistics platform integration',
+      'Custom webhook and automation pipelines',
+    ],
+  },
+];
+
+export const SERVICE_CATEGORIES = [
+  {
+    category: 'AI & Automation',
+    icon: 'Bot',
+    items: [
+      'AI Sales Agent',
+      'AI Customer Care Bot',
+      'Automated Follow-Up Sequences',
+      'Lead Qualification Automation',
+      'Smart Notifications & Alerts',
+    ],
+  },
+  {
+    category: 'Social Commerce',
+    icon: 'ShoppingBag',
+    items: [
+      'WhatsApp Sales Automation',
+      'Instagram & Facebook Commerce',
+      'Social Media Order Management',
+      'Broadcast & Campaign Messaging',
+      'Catalogue & Inventory Sync',
+    ],
+  },
+  {
+    category: 'Payment Integration',
+    icon: 'CreditCard',
+    items: [
+      'Mobile Money Integration Support',
+      'Merchant Wallet Setup',
+      'Online Payment Gateway Connection',
+      'Invoice & Payment Link Generation',
+      'Transaction Reporting & Reconciliation',
+    ],
+  },
+  {
+    category: 'Business Operations',
+    icon: 'Workflow',
+    items: [
+      'Workflow & Process Automation',
+      'CRM & Customer Data Management',
+      'Order & Dispatch Management',
+      'E-Commerce Store Setup',
+      'Reporting & Analytics Dashboards',
+    ],
+  },
+  {
+    category: 'ICT & Integration',
+    icon: 'Laptop',
+    items: [
+      'System & API Integration',
+      'WhatsApp Business API Setup',
+      'ERP & POS Integration',
+      'ICT Consulting & Strategy',
+      'Digital Transformation Advisory',
+    ],
+  },
 ];
 
 export const ADVANTAGES = [
@@ -126,6 +236,20 @@ export const WHO_WE_SERVE = [
   'Social Media Sellers',
   'Retail & Wholesale Traders',
   'Digital Businesses',
+  'Restaurants & Food Businesses',
+  'Real Estate Agencies',
+  'Healthcare Clinics & Pharmacies',
+  'Schools & Training Centres',
+  'Travel & Tour Operators',
+  'Salons & Beauty Services',
+  'Logistics & Courier Companies',
+  'Insurance Agents & Brokers',
+  'NGOs & Non-Profits',
+  'Freelancers & Consultants',
+  'Fashion & Clothing Brands',
+  'Electronics & Tech Shops',
+  'Supermarkets & Grocery Stores',
+  'Car Dealers & Auto Services',
 ];
 
 export const CLIENT_PORTAL_SECTIONS = [
