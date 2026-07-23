@@ -1,4 +1,4 @@
-import { verifyAdminSession, getUserPermissions } from '@/lib/supabase/dal';
+import { verifyAdminSession, getUserPermissions, getStaffProfile } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
 import { getSidebarBadgeCounts } from '@/lib/dashboard/badge-adapters';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -7,17 +7,13 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const user = await verifyAdminSession();
 
   const supabase = await createClient();
-  const [{ data: staffProfile }, permissions, badgeCounts] = await Promise.all([
-    supabase.from('staff_profiles').select('role').eq('user_id', user.id).maybeSingle(),
+  const [staffProfile, permissions, badgeCounts] = await Promise.all([
+    getStaffProfile(),
     getUserPermissions(),
     getSidebarBadgeCounts(supabase),
   ]);
 
-  let roleLabel = 'Staff';
-  if (staffProfile?.role) {
-    const { data: roleRow } = await supabase.from('roles').select('name').eq('id', staffProfile.role).maybeSingle();
-    roleLabel = roleRow?.name ?? staffProfile.role;
-  }
+  const roleLabel = staffProfile?.roleName ?? staffProfile?.role ?? 'Staff';
 
   return (
     <div className="min-h-screen bg-[#f5f3f3] flex flex-col lg:flex-row">

@@ -20,20 +20,39 @@ export const verifyAdminSession = cache(async () => {
   return user;
 });
 
+// Single source of truth for the caller's staff_profiles row (plus their
+// role's display name via a join) — cache()'d per request so the layout,
+// getUserPermissions(), and anything else that needs it during the same
+// render share one query instead of each re-fetching the same row.
+export const getStaffProfile = cache(async (): Promise<{
+  role: string;
+  is_active: boolean;
+  roleName: string | null;
+} | null> => {
+  const user = await verifyAdminSession();
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from('staff_profiles')
+    .select('role, is_active, roles(name)')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const roleRow = Array.isArray(data.roles) ? data.roles[0] : data.roles;
+
+  return { role: data.role, is_active: data.is_active, roleName: roleRow?.name ?? null };
+});
+
 // Returns the caller's full permission set (role_permissions for their
 // staff_profiles.role), or an empty set if they have no active staff row.
 // Used for nav filtering and for requirePermission() below. RLS still backs
 // every table independently — this is for UI/action gating, not the last
 // line of defense (see the protect_staff_role_changes DB trigger for that).
 export const getUserPermissions = cache(async (): Promise<Set<string>> => {
-  const user = await verifyAdminSession();
   const supabase = await createClient();
-
-  const { data: staff } = await supabase
-    .from('staff_profiles')
-    .select('role, is_active')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const staff = await getStaffProfile();
 
   if (!staff || !staff.is_active) {
     return new Set();
