@@ -49,6 +49,39 @@ export const PRIORITY_LEVELS = [
 
 export type Priority = (typeof PRIORITY_LEVELS)[number]['value'];
 
+// Sales pipeline stage — deliberately separate from `status` above.
+// `status` is the operational lifecycle (onboarding tracking, the
+// Executive Management dashboard, and sidebar badges all key off its exact
+// values) and stays untouched. `stage` is the new CRM sales-pipeline view
+// of the same lead, with its own taxonomy.
+export const LEAD_STAGES = [
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'qualified', label: 'Qualified' },
+  { value: 'needs_assessment', label: 'Needs Assessment' },
+  { value: 'proposal_preparation', label: 'Proposal Preparation' },
+  { value: 'proposal_sent', label: 'Proposal Sent' },
+  { value: 'negotiation', label: 'Negotiation' },
+  { value: 'won', label: 'Won' },
+  { value: 'lost', label: 'Lost' },
+  { value: 'on_hold', label: 'On Hold' },
+] as const;
+
+export type LeadStage = (typeof LEAD_STAGES)[number]['value'];
+
+export const LEAD_SOURCES = [
+  { value: 'website', label: 'Website' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'social_media', label: 'Social Media' },
+  { value: 'campaign', label: 'Campaign' },
+  { value: 'partnership', label: 'Partnership' },
+  { value: 'cold_call', label: 'Cold Call' },
+  { value: 'walk_in', label: 'Walk-In' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type LeadSource = (typeof LEAD_SOURCES)[number]['value'];
+
 export function labelFor<T extends { value: string; label: string }>(
   list: readonly T[],
   value: string
@@ -76,6 +109,12 @@ export interface Inquiry {
   last_contacted_at: string | null;
   assigned_to: string | null;
   priority: Priority;
+  lead_number: string | null;
+  stage: LeadStage;
+  lead_score: number;
+  lead_source: LeadSource | null;
+  assigned_user_id: string | null;
+  campaign_id: string | null;
   created_at: string;
   updated_at: string;
 }

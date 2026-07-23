@@ -3,32 +3,33 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
-import { STAFF_ROLES } from '@/data/staff';
-import { createStaff } from '@/app/admin/(protected)/staff/actions';
+import type { RoleOption } from '@/data/staff';
+import { inviteStaff } from '@/app/admin/(protected)/staff/actions';
 
-const initialForm = { fullName: '', email: '', role: 'sales_staff' };
-
-export default function AddStaffForm() {
+export default function AddStaffForm({ roles }: { roles: RoleOption[] }) {
   const router = useRouter();
+  const initialForm = { fullName: '', email: '', role: roles[0]?.value ?? '' };
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
 
-    const result = await createStaff(form);
+    const result = await inviteStaff(form);
     setSubmitting(false);
 
     if (result.success) {
       setForm(initialForm);
-      setOpen(false);
+      setSuccessMessage(result.message ?? 'Invite sent.');
       router.refresh();
     } else {
-      setError(result.message ?? 'Failed to add staff member.');
+      setError(result.message ?? 'Failed to invite staff member.');
     }
   };
 
@@ -36,10 +37,13 @@ export default function AddStaffForm() {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          setSuccessMessage(null);
+        }}
         className="inline-flex items-center gap-2 bg-[#00342b] text-white px-4 py-2 text-sm font-medium hover:bg-[#004d40] transition-colors"
       >
-        <Plus size={14} /> Add Staff
+        <Plus size={14} /> Invite Staff
       </button>
     );
   }
@@ -50,11 +54,15 @@ export default function AddStaffForm() {
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Add Staff</h2>
+        <h2 className="font-semibold text-[#00342b]">Invite Staff</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-[#707975] hover:text-[#00342b]">
           <X size={18} />
         </button>
       </div>
+
+      <p className="text-xs text-[#707975]">
+        They&apos;ll get an email with a one-time link to set their password and sign in.
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
@@ -86,7 +94,7 @@ export default function AddStaffForm() {
             onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
             className={inputClass}
           >
-            {STAFF_ROLES.map((r) => (
+            {roles.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
@@ -94,13 +102,16 @@ export default function AddStaffForm() {
       </div>
 
       {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+      {successMessage && (
+        <p className="text-sm text-[#1b7a3d] bg-[#dcf5e3] border border-[#bfe5cc] px-3 py-2">{successMessage}</p>
+      )}
 
       <button
         type="submit"
         disabled={submitting}
         className="bg-[#00342b] text-white px-6 py-2.5 text-sm font-medium hover:bg-[#004d40] transition-colors disabled:opacity-60"
       >
-        {submitting ? 'Adding...' : 'Add Staff Member'}
+        {submitting ? 'Sending Invite...' : 'Send Invite'}
       </button>
     </form>
   );

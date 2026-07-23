@@ -27,7 +27,7 @@ export default async function ServicesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-[Geist,sans-serif] font-bold text-2xl text-[#00342b]">Services</h1>
+        <h1 className="font-bold text-2xl text-[#00342b]">Services</h1>
         <p className="text-sm text-[#707975] mt-1">Client adoption across BizLink Africa&apos;s service catalog.</p>
       </div>
 

@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
+import AccessDenied from '@/components/admin/AccessDenied';
 import { ONBOARDING_STATUSES, INTEGRATION_STATUSES, type Client } from '@/data/clients';
 import { labelFor } from '@/data/inquiries';
 import ClientFilters from '@/components/admin/ClientFilters';
@@ -28,12 +30,27 @@ const INTEGRATION_COLORS: Record<string, string> = {
 };
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  let canCreate = true;
+  try {
+    await requirePermission('clients.view');
+  } catch {
+    return <AccessDenied requiredPermission="clients.view" />;
+  }
+  try {
+    await requirePermission('clients.create');
+  } catch {
+    canCreate = false;
+  }
+
   const params = await searchParams;
   const supabase = await createClient();
 
+  const { data: staffRows } = await supabase.from('staff_profiles').select('id, full_name').eq('is_active', true).order('full_name');
+  const staffNameById = new Map((staffRows ?? []).map((s) => [s.id, s.full_name]));
+
   let query = supabase
     .from('clients')
-    .select('id, client_name, business_name, business_type, email, phone, location, onboarding_status, integration_status, assigned_staff, is_active, date_joined')
+    .select('id, client_number, client_name, business_name, business_type, email, phone, location, onboarding_status, integration_status, account_owner_id, is_active, date_joined')
     .order('created_at', { ascending: false });
 
   if (params.q) {
@@ -55,17 +72,17 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const { data, error } = await query;
   const clients = (data ?? []) as Pick<
     Client,
-    'id' | 'client_name' | 'business_name' | 'business_type' | 'email' | 'phone' | 'location' | 'onboarding_status' | 'integration_status' | 'assigned_staff' | 'is_active' | 'date_joined'
+    'id' | 'client_number' | 'client_name' | 'business_name' | 'business_type' | 'email' | 'phone' | 'location' | 'onboarding_status' | 'integration_status' | 'account_owner_id' | 'is_active' | 'date_joined'
   >[];
 
   return (
     <div>
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-[Geist,sans-serif] font-bold text-2xl text-[#00342b]">Clients</h1>
+          <h1 className="font-bold text-2xl text-[#00342b]">Clients</h1>
           <p className="text-sm text-[#707975] mt-1">{clients.length} result{clients.length === 1 ? '' : 's'}</p>
         </div>
-        <AddClientForm />
+        {canCreate && <AddClientForm staff={staffRows ?? []} />}
       </div>
 
       <ClientFilters onboardingStatuses={ONBOARDING_STATUSES} integrationStatuses={INTEGRATION_STATUSES} />
@@ -115,7 +132,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     {labelFor(INTEGRATION_STATUSES, client.integration_status)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-[#3f4945]">{client.assigned_staff ?? '—'}</td>
+                <td className="px-4 py-3 text-[#3f4945]">{client.account_owner_id ? staffNameById.get(client.account_owner_id) ?? '—' : '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${client.is_active ? 'bg-[#dcf5e3] text-[#1b7a3d]' : 'bg-[#eeeeee] text-[#3f4945]'}`}>
                     {client.is_active ? 'Active' : 'Inactive'}

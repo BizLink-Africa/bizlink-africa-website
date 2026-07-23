@@ -53,7 +53,7 @@ export default async function AdminOverviewPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-[Geist,sans-serif] font-bold text-2xl text-[#00342b]">Overview</h1>
+        <h1 className="font-bold text-2xl text-[#00342b]">Overview</h1>
         <p className="text-sm text-[#707975] mt-1">BizLink Africa business snapshot.</p>
       </div>
 
@@ -63,7 +63,7 @@ export default async function AdminOverviewPage() {
           return (
             <div key={label} className={`bg-white border p-4 ${danger ? 'border-red-200' : 'border-[#bfc9c4]'}`}>
               <p className="text-xs font-semibold text-[#707975] uppercase tracking-wider">{label}</p>
-              <p className={`mt-1 font-[Geist,sans-serif] font-bold text-2xl ${danger ? 'text-red-700' : 'text-[#00342b]'}`}>
+              <p className={`mt-1 font-bold text-2xl ${danger ? 'text-red-700' : 'text-[#00342b]'}`}>
                 {value}
               </p>
             </div>

@@ -20,7 +20,7 @@ export default function NotificationStatusChart({ data }: { data: NotificationDa
 
   return (
     <div className="bg-white border border-[#bfc9c4] p-6">
-      <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b] mb-5">Notification Status</h2>
+      <h2 className="font-semibold text-[#00342b] mb-5">Notification Status</h2>
 
       <div className="flex h-6 w-full overflow-hidden rounded-sm bg-[#eeeeee]">
         {data.map((d, i) => {

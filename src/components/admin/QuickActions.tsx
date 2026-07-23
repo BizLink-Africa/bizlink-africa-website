@@ -58,7 +58,7 @@ export default function QuickActions({
   return (
     <div className="bg-white border border-[#bfc9c4] p-6 space-y-4">
       <div>
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Quick Actions</h2>
+        <h2 className="font-semibold text-[#00342b]">Quick Actions</h2>
         <p className="text-xs text-[#707975] mt-1">
           Last contacted: {lastContactedAt ? new Date(lastContactedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : 'Never'}
         </p>

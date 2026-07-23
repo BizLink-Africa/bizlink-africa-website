@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
 import { createClientRecord } from '@/app/admin/(protected)/clients/actions';
+import StaffPicker, { type StaffOption } from '@/components/admin/crm/StaffPicker';
 
 const initialForm = {
   clientName: '',
@@ -13,15 +14,17 @@ const initialForm = {
   email: '',
   phone: '',
   location: '',
-  assignedStaff: '',
+  industry: '',
+  accountOwnerId: '',
 };
 
-export default function AddClientForm() {
+export default function AddClientForm({ staff }: { staff: StaffOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateOfId, setDuplicateOfId] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,6 +35,7 @@ export default function AddClientForm() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setDuplicateOfId(null);
 
     const result = await createClientRecord(form);
     setSubmitting(false);
@@ -40,6 +44,7 @@ export default function AddClientForm() {
       router.push(`/admin/clients/${result.clientId}`);
     } else {
       setError(result.message ?? 'Failed to create client.');
+      setDuplicateOfId(result.duplicateOfId ?? null);
     }
   };
 
@@ -61,7 +66,7 @@ export default function AddClientForm() {
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Add Client</h2>
+        <h2 className="font-semibold text-[#00342b]">Add Client</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-[#707975] hover:text-[#00342b]">
           <X size={18} />
         </button>
@@ -81,6 +86,10 @@ export default function AddClientForm() {
           <input id="businessType" name="businessType" value={form.businessType} onChange={handleChange} className={inputClass} />
         </div>
         <div>
+          <label className={labelClass} htmlFor="industry">Industry</label>
+          <input id="industry" name="industry" value={form.industry} onChange={handleChange} className={inputClass} />
+        </div>
+        <div>
           <label className={labelClass} htmlFor="contactPerson">Contact Person</label>
           <input id="contactPerson" name="contactPerson" value={form.contactPerson} onChange={handleChange} className={inputClass} />
         </div>
@@ -97,12 +106,28 @@ export default function AddClientForm() {
           <input id="location" name="location" value={form.location} onChange={handleChange} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass} htmlFor="assignedStaff">Assigned Staff</label>
-          <input id="assignedStaff" name="assignedStaff" value={form.assignedStaff} onChange={handleChange} className={inputClass} />
+          <label className={labelClass} htmlFor="accountOwnerId">Account Owner</label>
+          <StaffPicker
+            id="accountOwnerId"
+            value={form.accountOwnerId}
+            onChange={(value) => setForm((prev) => ({ ...prev, accountOwnerId: value }))}
+            staff={staff}
+            className={inputClass}
+          />
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+          {error}
+          {duplicateOfId && (
+            <>
+              {' '}
+              <a href={`/admin/clients/${duplicateOfId}`} className="underline font-medium">View existing client →</a>
+            </>
+          )}
+        </p>
+      )}
 
       <button
         type="submit"

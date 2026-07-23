@@ -14,12 +14,20 @@ const MAX_MESSAGE_LENGTH = 5000;
 const RATE_LIMIT_WINDOW_MINUTES = 15;
 const RATE_LIMIT_MAX_SUBMISSIONS = 5;
 
-function badRequest(message: string) {
-  return NextResponse.json({ success: false, message }, { status: 400 });
+// The public enquiry form is the only legitimate caller of this route — it
+// always submits same-origin, so this exists purely as an explicit,
+// documented allow-list rather than relying on implicit browser preflight
+// behavior. Never echo back an arbitrary Origin; only ever one of these
+// exact values.
+const ALLOWED_ORIGINS = new Set(['https://bizlinkafrica.net', 'https://www.bizlinkafrica.net']);
+if (process.env.NODE_ENV !== 'production') {
+  ALLOWED_ORIGINS.add('http://localhost:3000');
 }
 
-function tooManyRequests(message: string) {
-  return NextResponse.json({ success: false, message }, { status: 429 });
+function corsHeaders(origin: string | null): HeadersInit {
+  return origin && ALLOWED_ORIGINS.has(origin)
+    ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+    : {};
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -31,7 +39,24 @@ function getClientIp(request: Request): string {
   return forwardedFor?.split(',')[0]?.trim() || 'unknown';
 }
 
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) });
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get('origin');
+  // A same-origin browser POST never sends an Origin header that fails this
+  // check; this only rejects a cross-origin request that got past (or
+  // skipped) preflight, e.g. a "simple" request with a form-encoded body.
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ success: false, message: 'Invalid request origin.' }, { status: 403 });
+  }
+  const responseHeaders = corsHeaders(origin);
+  const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+    NextResponse.json(body, { status, headers: responseHeaders });
+  const badRequest = (message: string) => jsonResponse({ success: false, message }, 400);
+  const tooManyRequests = (message: string) => jsonResponse({ success: false, message }, 429);
+
   const ipAddress = getClientIp(request);
   const supabase = createServiceClient();
 
@@ -109,7 +134,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (recentDuplicate) {
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       message: 'Your inquiry has already been received. Our team will be in touch shortly.',
     });
@@ -136,9 +161,9 @@ export async function POST(request: Request) {
 
   if (insertError || !inserted) {
     console.error('Failed to save inquiry', insertError);
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, message: 'Something went wrong submitting your inquiry. Please try again.' },
-      { status: 500 }
+      500
     );
   }
 
@@ -169,7 +194,7 @@ export async function POST(request: Request) {
     console.error('Failed to update notification_status for inquiry', inserted.id, updateError);
   }
 
-  return NextResponse.json({
+  return jsonResponse({
     success: true,
     message: 'Thank you for reaching out. Our team will review your application and contact you shortly.',
   });

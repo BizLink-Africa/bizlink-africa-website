@@ -3,17 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
-import { AGENT_TYPES, AGENT_STATUSES, KNOWLEDGE_BASE_STATUSES } from '@/data/aiAgents';
+import { AGENT_TYPES, AGENT_STATUSES, KNOWLEDGE_BASE_STATUSES, AGENT_CHANNELS, AGENT_DEPLOYMENT_STATUSES } from '@/data/aiAgents';
 import { createAgentConfig } from '@/app/admin/(protected)/ai-agents/actions';
 
 const initialForm = {
   clientId: '',
+  agentName: '',
   agentType: AGENT_TYPES[0].value as string,
   agentStatus: 'pending_setup',
+  channel: '',
   businessHours: '',
   knowledgeBaseStatus: 'not_started',
   productsConfigured: false,
+  deploymentStatus: 'not_deployed',
   humanHandoverContact: '',
+  technicalOwner: '',
 };
 
 export default function AddAgentConfigForm({ clients }: { clients: Array<{ id: string; client_name: string; business_name: string }> }) {
@@ -60,7 +64,7 @@ export default function AddAgentConfigForm({ clients }: { clients: Array<{ id: s
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Add Agent Config</h2>
+        <h2 className="font-semibold text-[#00342b]">Add Agent Config</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-[#707975] hover:text-[#00342b]">
           <X size={18} />
         </button>
@@ -81,6 +85,15 @@ export default function AddAgentConfigForm({ clients }: { clients: Array<{ id: s
               <option key={c.id} value={c.id}>{c.client_name} — {c.business_name}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="agentName">Agent Name</label>
+          <input
+            id="agentName"
+            value={form.agentName}
+            onChange={(e) => setForm((prev) => ({ ...prev, agentName: e.target.value }))}
+            className={inputClass}
+          />
         </div>
         <div>
           <label className={labelClass} htmlFor="agentType">Agent Type</label>
@@ -105,6 +118,33 @@ export default function AddAgentConfigForm({ clients }: { clients: Array<{ id: s
           >
             {AGENT_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="channel">Channel</label>
+          <select
+            id="channel"
+            value={form.channel}
+            onChange={(e) => setForm((prev) => ({ ...prev, channel: e.target.value }))}
+            className={inputClass}
+          >
+            <option value="">Unspecified</option>
+            {AGENT_CHANNELS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="deploymentStatus">Deployment</label>
+          <select
+            id="deploymentStatus"
+            value={form.deploymentStatus}
+            onChange={(e) => setForm((prev) => ({ ...prev, deploymentStatus: e.target.value }))}
+            className={inputClass}
+          >
+            {AGENT_DEPLOYMENT_STATUSES.map((d) => (
+              <option key={d.value} value={d.value}>{d.label}</option>
             ))}
           </select>
         </div>
@@ -137,6 +177,15 @@ export default function AddAgentConfigForm({ clients }: { clients: Array<{ id: s
             id="humanHandoverContact"
             value={form.humanHandoverContact}
             onChange={(e) => setForm((prev) => ({ ...prev, humanHandoverContact: e.target.value }))}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="technicalOwner">Technical Owner</label>
+          <input
+            id="technicalOwner"
+            value={form.technicalOwner}
+            onChange={(e) => setForm((prev) => ({ ...prev, technicalOwner: e.target.value }))}
             className={inputClass}
           />
         </div>

@@ -39,7 +39,7 @@ export default function OnboardingChecklist({
   return (
     <div className="bg-white border border-[#bfc9c4] p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Offline Onboarding Checklist</h2>
+        <h2 className="font-semibold text-[#00342b]">Offline Onboarding Checklist</h2>
         <span className="text-xs text-[#707975]">{completedCount} / {ONBOARDING_CHECKLIST_ITEMS.length}</span>
       </div>
 

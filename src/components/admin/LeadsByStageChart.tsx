@@ -13,7 +13,7 @@ export default function LeadsByStageChart({ data }: { data: StageDatum[] }) {
 
   return (
     <div className="bg-white border border-[#bfc9c4] p-6">
-      <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b] mb-5">Leads by Stage</h2>
+      <h2 className="font-semibold text-[#00342b] mb-5">Leads by Stage</h2>
       <div className="space-y-3">
         {data.map((d) => {
           const widthPct = (d.value / max) * 100;

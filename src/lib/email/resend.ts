@@ -7,6 +7,38 @@ function getResendClient(): Resend | null {
   return apiKey ? new Resend(apiKey) : null;
 }
 
+export type SendEmailResult = { success: true } | { success: false; error: string };
+
+// Generic sender, extracted from the original single-purpose inquiry
+// notification below — same soft-fail-if-unconfigured, never-throw contract,
+// but takes an arbitrary recipient/subject/body instead of being hardcoded
+// to one fixed inquiry template and one fixed address.
+export async function sendEmail(input: { to: string; subject: string; html: string; text?: string }): Promise<SendEmailResult> {
+  const resend = getResendClient();
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+
+  if (!resend || !fromAddress) {
+    const error = 'Resend is not configured (missing RESEND_API_KEY or RESEND_FROM_EMAIL).';
+    console.error(error);
+    return { success: false, error };
+  }
+
+  const { error } = await resend.emails.send({
+    from: fromAddress,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+  });
+
+  if (error) {
+    console.error('Failed to send email', input.to, error);
+    return { success: false, error: error.message ?? 'Unknown Resend error.' };
+  }
+
+  return { success: true };
+}
+
 export type SendInquiryEmailResult = { success: true } | { success: false; error: string };
 
 // Sends the single internal notification to BIZLINK_NOTIFICATION_EMAIL only —

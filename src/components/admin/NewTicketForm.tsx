@@ -3,19 +3,24 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
-import { TICKET_CATEGORIES } from '@/data/tickets';
+import { TICKET_CATEGORIES, DEPARTMENTS, type Department } from '@/data/tickets';
 import { PRIORITY_LEVELS } from '@/data/inquiries';
 import { createTicket } from '@/app/admin/(protected)/support-tickets/actions';
+import type { StaffOption } from '@/components/admin/crm/StaffPicker';
 
 const initialForm = {
   title: '',
+  description: '',
   clientId: '',
+  contactPerson: '',
+  contactEmail: '',
   category: TICKET_CATEGORIES[0].value as string,
   priority: 'normal',
-  assignedStaff: '',
+  department: '' as Department | '',
+  assignedUserId: '',
 };
 
-export default function NewTicketForm({ clients }: { clients: Array<{ id: string; client_name: string; business_name: string }> }) {
+export default function NewTicketForm({ clients, staff }: { clients: Array<{ id: string; client_name: string; business_name: string }>; staff: StaffOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
@@ -27,7 +32,7 @@ export default function NewTicketForm({ clients }: { clients: Array<{ id: string
     setSubmitting(true);
     setError(null);
 
-    const result = await createTicket(form);
+    const result = await createTicket({ ...form, department: form.department || undefined });
     setSubmitting(false);
 
     if (result.success) {
@@ -55,9 +60,9 @@ export default function NewTicketForm({ clients }: { clients: Array<{ id: string
   const labelClass = 'block text-xs font-semibold text-[#707975] uppercase tracking-wider mb-1';
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4">
+    <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4 w-full">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">New Ticket</h2>
+        <h2 className="font-semibold text-[#00342b]">New Ticket</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-[#707975] hover:text-[#00342b]">
           <X size={18} />
         </button>
@@ -72,6 +77,16 @@ export default function NewTicketForm({ clients }: { clients: Array<{ id: string
             onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
             required
             className={inputClass}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelClass} htmlFor="description">Description</label>
+          <textarea
+            id="description"
+            rows={3}
+            value={form.description}
+            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+            className={`${inputClass} resize-none`}
           />
         </div>
         <div>
@@ -89,13 +104,12 @@ export default function NewTicketForm({ clients }: { clients: Array<{ id: string
           </select>
         </div>
         <div>
-          <label className={labelClass} htmlFor="assignedStaff">Assigned Staff</label>
-          <input
-            id="assignedStaff"
-            value={form.assignedStaff}
-            onChange={(e) => setForm((prev) => ({ ...prev, assignedStaff: e.target.value }))}
-            className={inputClass}
-          />
+          <label className={labelClass} htmlFor="contactPerson">Contact Person</label>
+          <input id="contactPerson" value={form.contactPerson} onChange={(e) => setForm((p) => ({ ...p, contactPerson: e.target.value }))} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="contactEmail">Contact Email</label>
+          <input id="contactEmail" type="email" value={form.contactEmail} onChange={(e) => setForm((p) => ({ ...p, contactEmail: e.target.value }))} className={inputClass} />
         </div>
         <div>
           <label className={labelClass} htmlFor="category">Category</label>
@@ -121,6 +135,20 @@ export default function NewTicketForm({ clients }: { clients: Array<{ id: string
             {PRIORITY_LEVELS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="department">Department</label>
+          <select id="department" value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value as Department }))} className={inputClass}>
+            <option value="">Not set</option>
+            {DEPARTMENTS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="assignedUserId">Assigned Agent</label>
+          <select id="assignedUserId" value={form.assignedUserId} onChange={(e) => setForm((p) => ({ ...p, assignedUserId: e.target.value }))} className={inputClass}>
+            <option value="">Unassigned</option>
+            {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
           </select>
         </div>
       </div>

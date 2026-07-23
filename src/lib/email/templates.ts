@@ -94,3 +94,44 @@ export function buildInternalNotificationEmail(inquiry: InquiryEmailInput) {
     text,
   };
 }
+
+export interface ExecutiveDecisionEmailInput {
+  itemTitle: string;
+  actionType: string;
+  decidedBy: string;
+  comment: string | null;
+  href: string;
+}
+
+export function buildExecutiveDecisionEmail(input: ExecutiveDecisionEmailInput) {
+  // input.href is always an /admin/... dashboard link — this must resolve
+  // on the admin host, not the public marketing site (see src/proxy.ts:
+  // the public host 404s every /admin/* path after host separation).
+  const siteUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3000';
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #1b1c1c; max-width: 560px; margin: 0 auto;">
+      <div style="background:#00342b; color:#fff; padding:20px 24px;">
+        <h1 style="margin:0; font-size:18px;">Executive Decision Recorded</h1>
+      </div>
+      <div style="padding:24px; border:1px solid #bfc9c4; border-top:none;">
+        <p style="margin:0 0 12px;"><strong>${escapeHtml(input.itemTitle)}</strong></p>
+        <p style="margin:0 0 12px; color:#707975;">Action: ${escapeHtml(input.actionType)} — by ${escapeHtml(input.decidedBy)}</p>
+        ${input.comment ? `<p style="margin:0 0 16px; white-space:pre-wrap;">${escapeHtml(input.comment)}</p>` : ''}
+        <a href="${siteUrl}${input.href}" style="color:#00342b;">View record</a>
+      </div>
+    </div>
+  `;
+  const text = [
+    'Executive Decision Recorded',
+    input.itemTitle,
+    `Action: ${input.actionType} — by ${input.decidedBy}`,
+    input.comment ?? '',
+    `${siteUrl}${input.href}`,
+  ].join('\n');
+
+  return {
+    subject: `Executive Decision: ${input.itemTitle}`,
+    html,
+    text,
+  };
+}

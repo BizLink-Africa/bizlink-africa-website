@@ -35,7 +35,7 @@ export default function LeadsOverviewCards({ counts }: { counts: LeadCounts }) {
           className={`bg-white border p-4 ${accent === 'danger' && counts[key] > 0 ? 'border-red-200' : 'border-[#bfc9c4]'}`}
         >
           <p className="text-xs font-semibold text-[#707975] uppercase tracking-wider">{label}</p>
-          <p className={`mt-1 font-[Geist,sans-serif] font-bold text-2xl ${accent === 'danger' && counts[key] > 0 ? 'text-red-700' : 'text-[#00342b]'}`}>
+          <p className={`mt-1 font-bold text-2xl ${accent === 'danger' && counts[key] > 0 ? 'text-red-700' : 'text-[#00342b]'}`}>
             {counts[key]}
           </p>
         </div>

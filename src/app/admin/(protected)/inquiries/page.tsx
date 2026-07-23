@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
+import AccessDenied from '@/components/admin/AccessDenied';
 import { INQUIRY_STATUSES, REQUESTED_SOLUTIONS, NOTIFICATION_STATUS_OPTIONS, labelFor, type Inquiry } from '@/data/inquiries';
 import InquiryFilters from '@/components/admin/InquiryFilters';
 import StatusBadge from '@/components/admin/StatusBadge';
 import NotificationBadge from '@/components/admin/NotificationBadge';
 import LeadsOverviewCards, { type LeadCounts } from '@/components/admin/LeadsOverviewCards';
+import AddLeadForm from '@/components/admin/crm/AddLeadForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +52,22 @@ export default async function InquiriesPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  let canCreate = true;
+  try {
+    await requirePermission('leads.view');
+  } catch {
+    return <AccessDenied requiredPermission="leads.view" />;
+  }
+  try {
+    await requirePermission('leads.create');
+  } catch {
+    canCreate = false;
+  }
+
   const params = await searchParams;
   const supabase = await createClient();
+
+  const { data: staffRows } = await supabase.from('staff_profiles').select('id, full_name').eq('is_active', true).order('full_name');
 
   // Overview cards reflect totals across every inquiry, independent of the
   // filters applied to the table below.
@@ -107,9 +124,12 @@ export default async function InquiriesPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-[Geist,sans-serif] font-bold text-2xl text-[#00342b]">Leads / Inquiries</h1>
-        <p className="text-sm text-[#707975] mt-1">{inquiries.length} result{inquiries.length === 1 ? '' : 's'}</p>
+      <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="font-bold text-2xl text-[#00342b]">Leads / Inquiries</h1>
+          <p className="text-sm text-[#707975] mt-1">{inquiries.length} result{inquiries.length === 1 ? '' : 's'}</p>
+        </div>
+        {canCreate && <AddLeadForm staff={staffRows ?? []} />}
       </div>
 
       <LeadsOverviewCards counts={counts} />

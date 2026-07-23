@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Inter } from 'next/font/google';
+import { assertRequiredEnvVars } from '@/lib/env';
 import './globals.css';
 
 const geist = Geist({
@@ -56,6 +57,8 @@ const organizationJsonLd = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  assertRequiredEnvVars();
+
   return (
     <html lang="en" className={`${geist.variable} ${inter.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col bg-[#fbf9f8] text-[#1b1c1c] font-[var(--font-inter),sans-serif] antialiased overflow-x-hidden">

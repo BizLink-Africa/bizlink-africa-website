@@ -1,0 +1,11 @@
+-- finance_number_sequences was created without RLS (20260718000000), which
+-- left the raw invoice/proforma numbering counter directly readable and
+-- writable by any authenticated (or anon, if that role is ever granted
+-- table access) API caller via PostgREST — completely bypassing the
+-- intended single write path through next_finance_number(). That function
+-- is `security definer` and therefore unaffected by RLS on this table (it
+-- runs as the function owner), so enabling RLS with zero PostgREST-facing
+-- policies is the correct fix: nobody can read or write this table directly
+-- through the API; only next_finance_number() (and the service role) can
+-- touch it.
+alter table finance_number_sequences enable row level security;

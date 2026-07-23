@@ -3,16 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
-import { API_STATUSES } from '@/data/integrations';
+import { API_STATUSES, INTEGRATION_TYPES, ENVIRONMENTS, WEBHOOK_STATUSES } from '@/data/integrations';
 import { SERVICE_CATALOG } from '@/data/services';
 import { createIntegrationRecord } from '@/app/admin/(protected)/integration-health/actions';
 
 const initialForm = {
   clientId: '',
   serviceType: SERVICE_CATALOG[0].label as string,
+  integrationType: '',
+  environment: 'production',
   apiStatus: 'pending_setup',
   webhookEndpoint: '',
+  webhookStatus: 'not_configured',
   errorMessage: '',
+  technicalOwner: '',
 };
 
 export default function AddIntegrationForm({ clients }: { clients: Array<{ id: string; client_name: string; business_name: string }> }) {
@@ -57,7 +61,7 @@ export default function AddIntegrationForm({ clients }: { clients: Array<{ id: s
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-[#bfc9c4] p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Add Integration Record</h2>
+        <h2 className="font-semibold text-[#00342b]">Add Integration Record</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-[#707975] hover:text-[#00342b]">
           <X size={18} />
         </button>
@@ -92,6 +96,33 @@ export default function AddIntegrationForm({ clients }: { clients: Array<{ id: s
           </select>
         </div>
         <div>
+          <label className={labelClass} htmlFor="integrationType">Integration Type</label>
+          <select
+            id="integrationType"
+            value={form.integrationType}
+            onChange={(e) => setForm((prev) => ({ ...prev, integrationType: e.target.value }))}
+            className={inputClass}
+          >
+            <option value="">Unspecified</option>
+            {INTEGRATION_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="environment">Environment</label>
+          <select
+            id="environment"
+            value={form.environment}
+            onChange={(e) => setForm((prev) => ({ ...prev, environment: e.target.value }))}
+            className={inputClass}
+          >
+            {ENVIRONMENTS.map((e) => (
+              <option key={e.value} value={e.value}>{e.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className={labelClass} htmlFor="apiStatus">API Status</label>
           <select
             id="apiStatus"
@@ -105,6 +136,15 @@ export default function AddIntegrationForm({ clients }: { clients: Array<{ id: s
           </select>
         </div>
         <div>
+          <label className={labelClass} htmlFor="technicalOwner">Technical Owner</label>
+          <input
+            id="technicalOwner"
+            value={form.technicalOwner}
+            onChange={(e) => setForm((prev) => ({ ...prev, technicalOwner: e.target.value }))}
+            className={inputClass}
+          />
+        </div>
+        <div>
           <label className={labelClass} htmlFor="webhookEndpoint">Webhook Endpoint</label>
           <input
             id="webhookEndpoint"
@@ -113,6 +153,19 @@ export default function AddIntegrationForm({ clients }: { clients: Array<{ id: s
             placeholder="https://..."
             className={inputClass}
           />
+        </div>
+        <div>
+          <label className={labelClass} htmlFor="webhookStatus">Webhook Status</label>
+          <select
+            id="webhookStatus"
+            value={form.webhookStatus}
+            onChange={(e) => setForm((prev) => ({ ...prev, webhookStatus: e.target.value }))}
+            className={inputClass}
+          >
+            {WEBHOOK_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
         </div>
         <div className="sm:col-span-2">
           <label className={labelClass} htmlFor="errorMessage">Error Message (if any)</label>

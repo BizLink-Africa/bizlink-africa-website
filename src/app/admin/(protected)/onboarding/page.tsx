@@ -8,14 +8,14 @@ interface LeadRef {
   id: string;
   full_name: string;
   business_name: string;
-  assigned_to: string | null;
+  assigned_user_id: string | null;
 }
 
 interface ClientRef {
   id: string;
   client_name: string;
   business_name: string;
-  assigned_staff: string | null;
+  account_owner_id: string | null;
 }
 
 interface ChecklistRow {
@@ -35,13 +35,17 @@ export default async function OnboardingPage({
   const { view = 'pending' } = await searchParams;
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('onboarding_checklists')
-    .select(
-      '*, website_leads(id, full_name, business_name, assigned_to), clients(id, client_name, business_name, assigned_staff)'
-    )
-    .order('updated_at', { ascending: false });
+  const [{ data, error }, { data: staffRows }] = await Promise.all([
+    supabase
+      .from('onboarding_checklists')
+      .select(
+        '*, website_leads(id, full_name, business_name, assigned_user_id), clients(id, client_name, business_name, account_owner_id)'
+      )
+      .order('updated_at', { ascending: false }),
+    supabase.from('staff_profiles').select('id, full_name'),
+  ]);
 
+  const staffNameById = new Map((staffRows ?? []).map((s) => [s.id, s.full_name]));
   const rows = (data ?? []) as unknown as (ChecklistRow & Record<OnboardingChecklistKey, boolean>)[];
 
   const filtered = rows.filter((row) => {
@@ -54,23 +58,31 @@ export default async function OnboardingPage({
     <div>
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-[Geist,sans-serif] font-bold text-2xl text-[#00342b]">Onboarding</h1>
+          <h1 className="font-bold text-2xl text-[#00342b]">Onboarding</h1>
           <p className="text-sm text-[#707975] mt-1">
             Offline onboarding progress. Checklists are edited from each lead or client&apos;s detail page.
           </p>
         </div>
-        <div className="flex gap-1 bg-white border border-[#bfc9c4] p-1">
-          {(['pending', 'ready', 'all'] as const).map((v) => (
-            <Link
-              key={v}
-              href={`/admin/onboarding?view=${v}`}
-              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                view === v ? 'bg-[#00342b] text-white' : 'text-[#3f4945] hover:bg-[#f5f3f3]'
-              }`}
-            >
-              {v === 'ready' ? 'Go-Live Ready' : v}
-            </Link>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 bg-white border border-[#bfc9c4] p-1">
+            {(['pending', 'ready', 'all'] as const).map((v) => (
+              <Link
+                key={v}
+                href={`/admin/onboarding?view=${v}`}
+                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                  view === v ? 'bg-[#00342b] text-white' : 'text-[#3f4945] hover:bg-[#f5f3f3]'
+                }`}
+              >
+                {v === 'ready' ? 'Go-Live Ready' : v}
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/admin/onboarding/pipeline"
+            className="text-sm font-medium text-[#00342b] border border-[#00342b] px-3 py-2 hover:bg-[#00342b] hover:text-white transition-colors whitespace-nowrap"
+          >
+            View Pipeline →
+          </Link>
         </div>
       </div>
 
@@ -98,7 +110,8 @@ export default async function OnboardingPage({
               if (!entity) return null;
 
               const name = 'client_name' in entity ? entity.client_name : entity.full_name;
-              const assignedStaff = row.clients ? row.clients.assigned_staff : row.website_leads?.assigned_to;
+              const assignedUserId = row.clients ? row.clients.account_owner_id : row.website_leads?.assigned_user_id;
+              const assignedStaff = assignedUserId ? staffNameById.get(assignedUserId) ?? null : null;
               const completed = ONBOARDING_CHECKLIST_ITEMS.filter((item) => row[item.key]).length;
               const href = row.client_id ? `/admin/clients/${row.client_id}` : `/admin/inquiries/${row.lead_id}`;
 

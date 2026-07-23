@@ -14,9 +14,9 @@ export default function ClientDetailForm({
   initialEmail,
   initialPhone,
   initialLocation,
+  initialIndustry,
   initialOnboardingStatus,
   initialIntegrationStatus,
-  initialAssignedStaff,
   initialInternalNotes,
   initialIsActive,
 }: {
@@ -28,9 +28,9 @@ export default function ClientDetailForm({
   initialEmail: string;
   initialPhone: string;
   initialLocation: string;
+  initialIndustry: string;
   initialOnboardingStatus: string;
   initialIntegrationStatus: string;
-  initialAssignedStaff: string;
   initialInternalNotes: string;
   initialIsActive: boolean;
 }) {
@@ -42,9 +42,9 @@ export default function ClientDetailForm({
   const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState(initialPhone);
   const [location, setLocation] = useState(initialLocation);
+  const [industry, setIndustry] = useState(initialIndustry);
   const [onboardingStatus, setOnboardingStatus] = useState(initialOnboardingStatus);
   const [integrationStatus, setIntegrationStatus] = useState(initialIntegrationStatus);
-  const [assignedStaff, setAssignedStaff] = useState(initialAssignedStaff);
   const [internalNotes, setInternalNotes] = useState(initialInternalNotes);
   const [isActive, setIsActive] = useState(initialIsActive);
   const [saving, setSaving] = useState(false);
@@ -65,9 +65,9 @@ export default function ClientDetailForm({
       email,
       phone,
       location,
+      industry,
       onboardingStatus,
       integrationStatus,
-      assignedStaff,
       internalNotes,
     });
     setSaving(false);
@@ -97,7 +97,7 @@ export default function ClientDetailForm({
   return (
     <div className="bg-white border border-[#bfc9c4] p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Client Details</h2>
+        <h2 className="font-semibold text-[#00342b]">Client Details</h2>
         <button
           type="button"
           onClick={handleToggleActive}
@@ -140,8 +140,8 @@ export default function ClientDetailForm({
           <input id="location" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass} htmlFor="assignedStaff">Assigned Staff</label>
-          <input id="assignedStaff" value={assignedStaff} onChange={(e) => setAssignedStaff(e.target.value)} className={inputClass} />
+          <label className={labelClass} htmlFor="industry">Industry</label>
+          <input id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className={inputClass} />
         </div>
         <div>
           <label className={labelClass} htmlFor="onboardingStatus">Onboarding Status</label>

@@ -20,11 +20,12 @@ export const verifyAdminSession = cache(async () => {
   return user;
 });
 
-// Stricter check for actions that must be limited to super_admin — e.g.
-// changing another staff member's role. RLS enforces "must be active staff"
-// on every table, but can't cheaply distinguish "editing my own role" from
-// other updates, so role-escalation is blocked here instead.
-export async function requireSuperAdmin() {
+// Returns the caller's full permission set (role_permissions for their
+// staff_profiles.role), or an empty set if they have no active staff row.
+// Used for nav filtering and for requirePermission() below. RLS still backs
+// every table independently — this is for UI/action gating, not the last
+// line of defense (see the protect_staff_role_changes DB trigger for that).
+export const getUserPermissions = cache(async (): Promise<Set<string>> => {
   const user = await verifyAdminSession();
   const supabase = await createClient();
 
@@ -34,8 +35,37 @@ export async function requireSuperAdmin() {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!staff || !staff.is_active || staff.role !== 'super_admin') {
-    throw new Error('Only a super admin can perform this action.');
+  if (!staff || !staff.is_active) {
+    return new Set();
+  }
+
+  const { data: perms } = await supabase
+    .from('role_permissions')
+    .select('permission_id')
+    .eq('role_id', staff.role);
+
+  return new Set((perms ?? []).map((p) => p.permission_id));
+});
+
+// Gate for server actions that require a specific permission (e.g.
+// 'roles.manage' to change a staff member's role, 'users.manage' to
+// invite/deactivate staff). Throws rather than redirecting, since actions
+// call this mid-mutation and expect to handle the failure themselves.
+//
+// Deliberately does NOT audit-log every denial here: most pages call this
+// TWICE (once for `.view` — the real gate — then again for `.manage`, purely
+// to decide whether to render the page read-only vs. editable). That second
+// call fails for most viewers on purpose and would flood audit_logs with
+// noise that isn't a real access-denied event. The one real signal —
+// someone hit a page they have no business on — is logged once, at
+// <AccessDenied> itself (see components/admin/AccessDenied.tsx), which is
+// the thing that actually renders when the PRIMARY `.view` gate fails.
+export async function requirePermission(permission: string) {
+  const user = await verifyAdminSession();
+  const permissions = await getUserPermissions();
+
+  if (!permissions.has(permission)) {
+    throw new Error(`Missing required permission: ${permission}`);
   }
 
   return user;

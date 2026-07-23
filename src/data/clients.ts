@@ -31,6 +31,9 @@ export interface Client {
   is_active: boolean;
   internal_notes: string | null;
   date_joined: string;
+  client_number: string | null;
+  industry: string | null;
+  account_owner_id: string | null;
   created_at: string;
   updated_at: string;
 }

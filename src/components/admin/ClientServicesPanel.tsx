@@ -34,7 +34,7 @@ export default function ClientServicesPanel({
 
   return (
     <div className="bg-white border border-[#bfc9c4] p-6 space-y-4">
-      <h2 className="font-[Geist,sans-serif] font-semibold text-[#00342b]">Services</h2>
+      <h2 className="font-semibold text-[#00342b]">Services</h2>
 
       <ul className="divide-y divide-[#e5e5e5]">
         {SERVICE_CATALOG.map((service) => {

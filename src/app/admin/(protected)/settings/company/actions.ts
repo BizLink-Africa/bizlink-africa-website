@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { verifyAdminSession } from '@/lib/supabase/dal';
+import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 
@@ -13,16 +13,26 @@ export interface CompanySettingsInput {
   supportEmail: string;
   phoneWhatsapp: string;
   location: string;
+  logoUrl?: string;
+  businessRegistrationNumber?: string;
+  taxIdentificationNumber?: string;
+  brandPrimaryColor: string;
+  brandSecondaryColor: string;
 }
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export async function updateCompanySettings(
-  input: CompanySettingsInput
-): Promise<{ success: boolean; message?: string }> {
-  const user = await verifyAdminSession();
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+export async function updateCompanySettings(input: CompanySettingsInput): Promise<{ success: boolean; message?: string }> {
+  let user;
+  try {
+    user = await requirePermission('company.settings.manage');
+  } catch {
+    return { success: false, message: 'You do not have permission to change company settings.' };
+  }
 
   if (
     !isNonEmptyString(input.businessName) ||
@@ -31,7 +41,10 @@ export async function updateCompanySettings(
     !isNonEmptyString(input.phoneWhatsapp) ||
     !isNonEmptyString(input.location)
   ) {
-    return { success: false, message: 'All fields are required.' };
+    return { success: false, message: 'Business name, contact details, and location are required.' };
+  }
+  if (!HEX_COLOR.test(input.brandPrimaryColor) || !HEX_COLOR.test(input.brandSecondaryColor)) {
+    return { success: false, message: 'Brand colors must be valid hex codes (e.g. #00342b).' };
   }
 
   const supabase = await createClient();
@@ -43,6 +56,11 @@ export async function updateCompanySettings(
       support_email: input.supportEmail.trim().slice(0, MAX_TEXT_LENGTH),
       phone_whatsapp: input.phoneWhatsapp.trim().slice(0, MAX_TEXT_LENGTH),
       location: input.location.trim().slice(0, MAX_TEXT_LENGTH),
+      logo_url: input.logoUrl?.trim() || null,
+      business_registration_number: input.businessRegistrationNumber?.trim() || null,
+      tax_identification_number: input.taxIdentificationNumber?.trim() || null,
+      brand_primary_color: input.brandPrimaryColor,
+      brand_secondary_color: input.brandSecondaryColor,
     })
     .eq('id', true);
 
@@ -58,6 +76,6 @@ export async function updateCompanySettings(
     newValue: input,
   });
 
-  revalidatePath('/admin/settings');
+  revalidatePath('/admin/settings/company');
   return { success: true };
 }

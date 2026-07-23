@@ -108,7 +108,7 @@ export default function ContactPage() {
             Let&apos;s Build Together
           </h1>
           <p className="text-lg leading-relaxed text-[#3f4945] max-w-xl">
-            Submit your business details and our team will contact you for offline onboarding and consultation.
+            Submit your business details and our team will contact you.
           </p>
         </div>
       </section>

@@ -68,6 +68,8 @@
   /* Fonts */
   --font-sans: 'Inter', sans-serif;
   --font-geist: 'Geist', sans-serif;
+  --font-palatino: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-times: 'Times New Roman', Times, serif;
 }
 
 * {
@@ -76,6 +78,11 @@
 
 html {
   scroll-behavior: smooth;
+  /* overflow-x on body alone doesn't reliably clip position:fixed
+     descendants (e.g. the mobile sidebar drawer, translated off-screen) —
+     those are positioned against the viewport/initial containing block,
+     which html establishes, not body's box. */
+  overflow-x: hidden;
 }
 
 body {
@@ -83,6 +90,47 @@ body {
   color: var(--color-on-surface);
   font-family: var(--font-sans);
   overflow-x: hidden;
+}
+
+/* Admin dashboard typography layer — scoped to .admin-app (the root wrapper
+   in src/app/admin/layout.tsx) rather than body/html, so the public
+   marketing site keeps its own typography untouched. Every admin page
+   inherits this by default; per-element font-family overrides should not be
+   added — this is the single point of truth. */
+.admin-app {
+  font-family: var(--font-palatino);
+}
+
+/* Sidebar typography exception — deliberately narrower than .admin-app.
+   No !important needed: font-family isn't a specificity fight here, it's an
+   inheritance one. .admin-app sets font-family on itself and every
+   descendant inherits that value; an inherited value has no specificity of
+   its own, so a plain declaration on .admin-sidebar (a descendant, and the
+   sidebar's own root) always wins for that subtree, same as .admin-app
+   already wins over body's Inter for the whole admin app. Buttons/selects
+   don't inherit font-family from ancestors by default in any browser
+   (anchors/spans/paragraphs already do — those four are listed anyway to
+   mirror the exact selector the sidebar spec asked for), so those need the
+   explicit inherit. Deliberately not using a universal child (star)
+   selector here — SVG icons don't render font-family, so it wouldn't break
+   them, but there's no upside to the broader selector either. */
+.admin-sidebar {
+  font-family: var(--font-times);
+}
+
+.admin-sidebar button,
+.admin-sidebar a,
+.admin-sidebar span,
+.admin-sidebar p,
+.admin-sidebar select {
+  font-family: inherit;
+}
+
+.admin-app button,
+.admin-app input,
+.admin-app select,
+.admin-app textarea {
+  font: inherit;
 }
 
 /* Tech flow line animation */

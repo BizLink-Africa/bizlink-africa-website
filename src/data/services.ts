@@ -21,6 +21,20 @@ export const SERVICE_STATUSES = [
 
 export type ServiceStatus = (typeof SERVICE_STATUSES)[number]['value'];
 
+// Delivery/rollout workflow — separate dimension from `status` above.
+// `status` says whether the service is switched on for billing/use;
+// `delivery_status` says where Operations is in actually rolling it out.
+export const DELIVERY_STATUSES = [
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'on_hold', label: 'On Hold' },
+  { value: 'cancelled', label: 'Cancelled' },
+] as const;
+
+export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number]['value'];
+
 export interface ClientService {
   id: string;
   client_id: string;
@@ -28,6 +42,12 @@ export interface ClientService {
   status: ServiceStatus;
   activated_at: string | null;
   notes: string | null;
+  delivery_status: DeliveryStatus;
+  scheduled_date: string | null;
+  delivery_started_at: string | null;
+  delivered_at: string | null;
+  assigned_to: string | null;
+  delivery_notes: string | null;
   created_at: string;
   updated_at: string;
 }

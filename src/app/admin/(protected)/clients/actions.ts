@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { verifyAdminSession } from '@/lib/supabase/dal';
+import { requirePermission, verifyAdminSession } from '@/lib/supabase/dal';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 import { ONBOARDING_STATUSES, INTEGRATION_STATUSES } from '@/data/clients';
@@ -21,7 +21,8 @@ export interface ClientInput {
   email: string;
   phone: string;
   location?: string;
-  assignedStaff?: string;
+  industry?: string;
+  accountOwnerId?: string;
   internalNotes?: string;
 }
 
@@ -31,26 +32,60 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function createClientRecord(
   input: ClientInput
-): Promise<{ success: boolean; message?: string; clientId?: string }> {
-  const user = await verifyAdminSession();
+): Promise<{ success: boolean; message?: string; clientId?: string; duplicateOfId?: string }> {
+  let user;
+  try {
+    user = await requirePermission('clients.create');
+  } catch {
+    return { success: false, message: 'You do not have permission to create clients.' };
+  }
 
   if (!isNonEmptyString(input.clientName) || !isNonEmptyString(input.businessName) || !isNonEmptyString(input.email) || !isNonEmptyString(input.phone)) {
     return { success: false, message: 'Client name, business name, email, and phone are required.' };
   }
 
   const supabase = await createSupabaseClient();
+  const email = input.email.trim().slice(0, MAX_TEXT_LENGTH);
+  const phone = input.phone.trim().slice(0, MAX_TEXT_LENGTH);
+  const businessName = input.businessName.trim().slice(0, MAX_TEXT_LENGTH);
+
+  // Duplicate prevention — a manual "Add Client" had no guard at all before
+  // this (only the lead-conversion path was idempotent, keyed on lead_id).
+  // Checked by email/phone/exact business name, any one match is enough.
+  const { data: duplicate } = await supabase
+    .from('clients')
+    .select('id, business_name')
+    .or(`email.eq.${email},phone.eq.${phone},business_name.eq.${businessName}`)
+    .maybeSingle();
+
+  if (duplicate) {
+    return {
+      success: false,
+      message: `A client with this email, phone, or business name already exists ("${duplicate.business_name}").`,
+      duplicateOfId: duplicate.id,
+    };
+  }
+
+  const { data: numberData, error: numberError } = await supabase.rpc('next_finance_number', { seq_prefix: 'CLI' });
+  if (numberError || !numberData) {
+    console.error('Failed to generate client number', numberError);
+    return { success: false, message: 'Failed to generate a client number.' };
+  }
+
   const { data, error } = await supabase
     .from('clients')
     .insert({
       client_name: input.clientName.trim().slice(0, MAX_TEXT_LENGTH),
-      business_name: input.businessName.trim().slice(0, MAX_TEXT_LENGTH),
+      business_name: businessName,
       business_type: input.businessType?.trim().slice(0, MAX_TEXT_LENGTH) || null,
       contact_person: input.contactPerson?.trim().slice(0, MAX_TEXT_LENGTH) || null,
-      email: input.email.trim().slice(0, MAX_TEXT_LENGTH),
-      phone: input.phone.trim().slice(0, MAX_TEXT_LENGTH),
+      email,
+      phone,
       location: input.location?.trim().slice(0, MAX_TEXT_LENGTH) || null,
-      assigned_staff: input.assignedStaff?.trim().slice(0, MAX_TEXT_LENGTH) || null,
+      industry: input.industry?.trim().slice(0, MAX_TEXT_LENGTH) || null,
+      account_owner_id: input.accountOwnerId || null,
       internal_notes: input.internalNotes?.trim() || null,
+      client_number: numberData,
     })
     .select('id')
     .single();
@@ -72,6 +107,35 @@ export async function createClientRecord(
   return { success: true, clientId: data.id };
 }
 
+export async function assignClientOwner(id: string, accountOwnerId: string | null): Promise<{ success: boolean; message?: string }> {
+  let user;
+  try {
+    user = await requirePermission('clients.update');
+  } catch {
+    return { success: false, message: 'You do not have permission to update clients.' };
+  }
+
+  const supabase = await createSupabaseClient();
+  const { error } = await supabase.from('clients').update({ account_owner_id: accountOwnerId || null }).eq('id', id);
+
+  if (error) {
+    console.error('Failed to assign client owner', id, error);
+    return { success: false, message: 'Failed to assign account owner.' };
+  }
+
+  await logAuditEvent({
+    performedBy: user.email ?? 'unknown',
+    actionType: 'assign_owner',
+    module: 'clients',
+    recordId: id,
+    newValue: { accountOwnerId },
+  });
+
+  revalidatePath('/admin/clients');
+  revalidatePath(`/admin/clients/${id}`);
+  return { success: true };
+}
+
 export interface ClientUpdates {
   clientName?: string;
   businessName?: string;
@@ -80,6 +144,7 @@ export interface ClientUpdates {
   email?: string;
   phone?: string;
   location?: string | null;
+  industry?: string | null;
   onboardingStatus?: string;
   integrationStatus?: string;
   assignedStaff?: string | null;
@@ -90,7 +155,12 @@ export async function updateClientRecord(
   id: string,
   updates: ClientUpdates
 ): Promise<{ success: boolean; message?: string }> {
-  const user = await verifyAdminSession();
+  let user;
+  try {
+    user = await requirePermission('clients.update');
+  } catch {
+    return { success: false, message: 'You do not have permission to update clients.' };
+  }
 
   if (updates.onboardingStatus && !VALID_ONBOARDING_STATUSES.has(updates.onboardingStatus)) {
     return { success: false, message: 'Invalid onboarding status.' };
@@ -110,6 +180,7 @@ export async function updateClientRecord(
       ...(updates.email !== undefined ? { email: updates.email.trim().slice(0, MAX_TEXT_LENGTH) } : {}),
       ...(updates.phone !== undefined ? { phone: updates.phone.trim().slice(0, MAX_TEXT_LENGTH) } : {}),
       ...(updates.location !== undefined ? { location: updates.location?.trim().slice(0, MAX_TEXT_LENGTH) || null } : {}),
+      ...(updates.industry !== undefined ? { industry: updates.industry?.trim().slice(0, MAX_TEXT_LENGTH) || null } : {}),
       ...(updates.onboardingStatus ? { onboarding_status: updates.onboardingStatus } : {}),
       ...(updates.integrationStatus ? { integration_status: updates.integrationStatus } : {}),
       ...(updates.assignedStaff !== undefined ? { assigned_staff: updates.assignedStaff?.trim().slice(0, MAX_TEXT_LENGTH) || null } : {}),
@@ -136,7 +207,12 @@ export async function updateClientRecord(
 }
 
 export async function setClientActive(id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> {
-  const user = await verifyAdminSession();
+  let user;
+  try {
+    user = await requirePermission('clients.update');
+  } catch {
+    return { success: false, message: 'You do not have permission to update clients.' };
+  }
 
   const supabase = await createSupabaseClient();
   const { error } = await supabase.from('clients').update({ is_active: isActive }).eq('id', id);

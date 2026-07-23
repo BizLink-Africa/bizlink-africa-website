@@ -20,7 +20,7 @@ export default function StaffActiveToggle({ id, isActive }: { id: string; isActi
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className={`text-xs font-medium px-3 py-1.5 border transition-colors disabled:opacity-60 ${
+      className={`text-xs font-medium px-2.5 py-1.5 border transition-colors disabled:opacity-60 whitespace-nowrap ${
         isActive ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-[#00342b] text-[#00342b] hover:bg-[#00342b] hover:text-white'
       }`}
     >
