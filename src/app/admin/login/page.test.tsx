@@ -206,7 +206,11 @@ describe('AdminLoginPage — role-based redirect', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith(expectedRoute));
-    expect(refresh).toHaveBeenCalled();
+    // refresh() must NOT fire alongside push() here — doing so in the real
+    // App Router interrupts the pending push navigation before it commits,
+    // which is exactly the "stuck on Signing in… until a manual reload" bug
+    // this regression-tests against.
+    expect(refresh).not.toHaveBeenCalled();
     expect(recordLoginEvent).toHaveBeenCalledWith(
       expect.objectContaining({ email: VALID_EMAIL, success: true })
     );

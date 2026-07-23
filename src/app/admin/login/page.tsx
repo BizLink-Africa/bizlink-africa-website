@@ -107,7 +107,11 @@ export default function AdminLoginPage() {
     // Signed in successfully — never leave the button stuck on "Signing
     // in..." if the role lookup or navigation itself fails for any reason;
     // the user is already authenticated, so falling back to the Overview
-    // page is always safe.
+    // page is always safe. Deliberately no router.refresh() after push():
+    // push() already fetches fresh data for the destination route, and
+    // calling refresh() in the same tick interrupts that pending navigation
+    // in the real App Router — leaving the button stuck on "Signing in…"
+    // until a manual reload.
     try {
       const { data: staff } = await supabase
         .from('staff_profiles')
@@ -117,8 +121,6 @@ export default function AdminLoginPage() {
       router.push(getDashboardRouteForRole(staff?.role ?? null));
     } catch {
       router.push(DEFAULT_DASHBOARD_ROUTE);
-    } finally {
-      router.refresh();
     }
   };
 
