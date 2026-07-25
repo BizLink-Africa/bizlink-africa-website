@@ -9,7 +9,7 @@ create table if not exists company_settings (
   business_name text not null default 'BizLink Africa Limited',
   business_email text not null default 'info@bizlinkafrica.net',
   support_email text not null default 'support@bizlinkafrica.net',
-  phone_whatsapp text not null default '+255 624 239 712',
+  phone_whatsapp text not null default '+255 747 730 270',
   location text not null default 'Temboni, Ubungo, Dar es Salaam, Tanzania',
   updated_at timestamp with time zone not null default now()
 );

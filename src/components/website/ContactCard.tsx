@@ -20,11 +20,11 @@ export default function ContactCard() {
             {COMPANY.emailSupport}
           </span>
         </a>
-        <a href={COMPANY.whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 text-sm hover:text-[#00342b] transition-colors text-[#1b1c1c]">
+        <a href={COMPANY.phoneLink} className="flex items-start gap-3 text-sm hover:text-[#00342b] transition-colors text-[#1b1c1c]">
           <Phone size={16} className="mt-0.5 text-[#00342b] shrink-0" />
           <span>
             <span className="block text-xs text-[#707975] mb-0.5">Customer Support</span>
-            {COMPANY.whatsapp}
+            {COMPANY.phone}
           </span>
         </a>
         <div className="flex items-start gap-3 text-sm text-[#1b1c1c]">

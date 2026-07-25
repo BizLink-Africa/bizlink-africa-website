@@ -72,15 +72,13 @@ export default function Footer() {
               </span>
             </a>
             <a
-              href={COMPANY.whatsappLink}
+              href={COMPANY.phoneLink}
               className={`flex items-start gap-2 text-sm hover:text-[#afefdd] transition-colors ${FOCUS_RING}`}
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <Phone size={15} className="mt-0.5 shrink-0 text-[#94d3c1]" />
               <span>
                 <span className="block text-xs text-[#aeb1b1] mb-0.5">Customer Support</span>
-                {COMPANY.whatsapp}
+                {COMPANY.phone}
               </span>
             </a>
           </div>

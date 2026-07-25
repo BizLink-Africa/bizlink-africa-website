@@ -42,8 +42,8 @@ function ContactDetails() {
         </p>
         <p className="flex items-center gap-2">
           <Phone size={14} className="shrink-0" aria-hidden="true" />
-          <a href={COMPANY.whatsappLink} className="hover:underline">
-            {COMPANY.whatsapp}
+          <a href={COMPANY.phoneLink} className="hover:underline">
+            {COMPANY.phone}
           </a>
         </p>
         <p className="flex items-center gap-2">

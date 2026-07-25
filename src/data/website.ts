@@ -12,8 +12,10 @@ export const COMPANY = {
   address: 'Temboni, Ubungo, Dar es Salaam, Tanzania',
   emailGeneral: 'info@bizlinkafrica.net',
   emailSupport: 'support@bizlinkafrica.net',
-  whatsapp: '+255 624 239 712',
-  whatsappLink: 'https://wa.me/255624239712',
+  phone: '+255 747 730 270',
+  phoneLink: 'tel:+255747730270',
+  whatsapp: '+255 747 730 270',
+  whatsappLink: 'https://wa.me/255747730270',
   copyright: '© 2026 BizLink Africa Limited. All Rights Reserved.',
 };
 

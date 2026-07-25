@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Inter } from 'next/font/google';
 import { assertRequiredEnvVars } from '@/lib/env';
+import { COMPANY } from '@/data/website';
 import './globals.css';
 
 const geist = Geist({
@@ -47,7 +48,7 @@ const organizationJsonLd = {
   url: BASE_URL,
   logo: `${BASE_URL}/bizlink-logo.jpg`,
   email: 'info@bizlinkafrica.net',
-  telephone: '+255624239712',
+  telephone: COMPANY.phoneLink.replace('tel:', ''),
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Temboni, Ubungo',

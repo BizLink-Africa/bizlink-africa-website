@@ -318,11 +318,11 @@ export default function ContactPage() {
                     <p className="text-sm text-[#1b1c1c] group-hover:text-[#00342b] transition-colors">{COMPANY.emailSupport}</p>
                   </div>
                 </a>
-                <a href={COMPANY.whatsappLink} target="_blank" rel="noopener noreferrer" className={`flex items-start gap-3 group ${linkFocusClass}`}>
+                <a href={COMPANY.phoneLink} className={`flex items-start gap-3 group ${linkFocusClass}`}>
                   <Phone size={16} className="text-[#00342b] mt-0.5 shrink-0" />
                   <div>
                     <p className="text-xs text-[#707975] mb-0.5">Customer Support</p>
-                    <p className="text-sm text-[#1b1c1c] group-hover:text-[#00342b] transition-colors">{COMPANY.whatsapp}</p>
+                    <p className="text-sm text-[#1b1c1c] group-hover:text-[#00342b] transition-colors">{COMPANY.phone}</p>
                   </div>
                 </a>
                 <div className="flex items-start gap-3 border-t border-[#bfc9c4] pt-5">

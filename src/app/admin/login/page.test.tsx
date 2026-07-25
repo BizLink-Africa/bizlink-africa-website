@@ -104,7 +104,7 @@ describe('AdminLoginPage — contact details', () => {
   it('displays the approved BizLink Africa contact information', () => {
     render(<AdminLoginPage />);
     expect(document.body.textContent).toContain('support@bizlinkafrica.net');
-    expect(document.body.textContent).toContain('+255 624 239 712');
+    expect(document.body.textContent).toContain('+255 747 730 270');
     expect(document.body.textContent).toContain('Temboni, Ubungo, Dar es Salaam');
     expect(document.body.textContent).toContain('BizLink Africa');
   });
