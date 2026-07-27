@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendInquiryNotificationEmail } from '@/lib/email/resend';
 import { REQUESTED_SOLUTIONS, PREFERRED_CONTACT_METHODS } from '@/data/inquiries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 const VALID_SOLUTIONS = new Set<string>(REQUESTED_SOLUTIONS.map((s) => s.value));
 const VALID_CONTACT_METHODS = new Set<string>(PREFERRED_CONTACT_METHODS.map((m) => m.value));
@@ -165,6 +166,26 @@ export async function POST(request: Request) {
       { success: false, message: 'Something went wrong submitting your inquiry. Please try again.' },
       500
     );
+  }
+
+  // Capture server-side analytics — best-effort, must not affect the response.
+  const distinctId = request.headers.get('x-posthog-distinct-id');
+  const posthogClient = getPostHogClient();
+  if (posthogClient && distinctId) {
+    posthogClient.identify({
+      distinctId,
+      properties: { submitted_inquiry: true },
+    });
+    posthogClient.capture({
+      distinctId,
+      event: 'inquiry_received',
+      properties: {
+        solutions_requested: requestedSolution,
+        preferred_contact_method: preferredContactMethod || null,
+        has_message: message.length > 0,
+      },
+    });
+    await posthogClient.flush();
   }
 
   // The inquiry is saved. Everything from here on is best-effort — email
