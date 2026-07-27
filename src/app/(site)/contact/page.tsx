@@ -5,6 +5,7 @@ import { Mail, Phone, MapPin, Send, MessageCircle, Loader2 } from 'lucide-react'
 import { useState } from 'react';
 import { COMPANY } from '@/data/website';
 import { REQUESTED_SOLUTIONS, PREFERRED_CONTACT_METHODS } from '@/data/inquiries';
+import posthog from 'posthog-js';
 
 // Metadata must be in a server component — using a separate export via generateMetadata isn't possible in a client component.
 // For client-side form interaction we use 'use client', and set metadata via a separate metadata.ts in the route folder.
@@ -71,9 +72,13 @@ export default function ContactPage() {
     setSubmitting(true);
     let result: { success: boolean; message: string };
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const distinctId = posthog.get_distinct_id();
+      if (distinctId) headers['X-POSTHOG-DISTINCT-ID'] = distinctId;
+
       const response = await fetch('/api/inquiries', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(form),
       });
       result = await response.json();
@@ -83,9 +88,19 @@ export default function ContactPage() {
     setSubmitting(false);
 
     if (!result.success) {
+      posthog.capture('inquiry_submission_failed', {
+        solutions_requested: form.requestedSolution,
+        preferred_contact_method: form.preferredContactMethod,
+      });
       setErrorMessage(result.message);
       return;
     }
+
+    posthog.capture('inquiry_form_submitted', {
+      solutions_requested: form.requestedSolution,
+      preferred_contact_method: form.preferredContactMethod,
+      has_message: form.message.length > 0,
+    });
 
     setForm(initialForm);
     setSubmitted(true);
@@ -340,6 +355,7 @@ export default function ContactPage() {
               href={COMPANY.whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => posthog.capture('whatsapp_contact_clicked')}
               className={`flex items-center flex-wrap justify-between gap-3 border border-[#00342b] bg-[#00342b]/5 p-6 hover:bg-[#00342b] hover:text-white group transition-colors ${linkFocusClass}`}
             >
               <div>

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '@/data/website';
+import posthog from 'posthog-js';
 
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#00342b]';
 
@@ -57,6 +58,7 @@ export default function Header() {
         <div className="flex items-center gap-3">
           <Link
             href="/contact"
+            onClick={() => posthog.capture('header_cta_clicked', { source: 'desktop' })}
             className={`hidden md:inline-flex bg-[#00342b] text-white px-5 py-2.5 text-sm font-medium tracking-wide hover:bg-[#004d40] transition-colors active:scale-95 ${FOCUS_RING}`}
           >
             Start Your Journey
@@ -94,7 +96,7 @@ export default function Header() {
           })}
           <Link
             href="/contact"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => { setMobileOpen(false); posthog.capture('header_cta_clicked', { source: 'mobile' }); }}
             className={`mt-2 inline-flex justify-center bg-[#00342b] text-white px-5 py-3 text-sm font-medium tracking-wide hover:bg-[#004d40] transition-colors ${FOCUS_RING}`}
           >
             Start Your Journey
