@@ -112,6 +112,62 @@ describe('proxy — production host enforcement', () => {
   });
 });
 
+describe('proxy — /api/* is never rewritten or auth-gated on the admin host', () => {
+  // Regression test for a real bug found via a live production
+  // connectivity probe (see the production-readiness verification
+  // report): POST https://admin.bizlinkafrica.net/api/integrations/selcom/
+  // callback/<secret> was being rewritten to
+  // /admin/api/integrations/selcom/callback/<secret>, which the admin-area
+  // auth gate then treated as an unauthenticated page request and
+  // redirected to /admin/login — meaning Selcom's server-to-server
+  // callback (which never carries a staff session) could never reach the
+  // actual route handler, and the same was true for Vercel's cron hitting
+  // /api/payouts/status-check-cron. Every /api/* route implements its own
+  // protection (a secret path segment, a bearer token, CORS + validation)
+  // and must never be folded into the staff cookie-session gate at all.
+  beforeEach(() => {
+    process.env.VERCEL_ENV = 'production';
+  });
+
+  it('never rewrites or redirects the Selcom callback route on the admin host, even with no session', async () => {
+    const response = await proxy(
+      makeRequest(
+        'https://admin.bizlinkafrica.net/api/integrations/selcom/callback/some-secret',
+        'admin.bizlinkafrica.net'
+      )
+    );
+    expect(response.status).not.toBe(307);
+    expect(response.headers.get('location')).toBeNull();
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('never rewrites or redirects the status-check cron route on the admin host, even with no session', async () => {
+    const response = await proxy(
+      makeRequest('https://admin.bizlinkafrica.net/api/payouts/status-check-cron', 'admin.bizlinkafrica.net')
+    );
+    expect(response.status).not.toBe(307);
+    expect(response.headers.get('location')).toBeNull();
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('never rewrites any /api/* path on the admin host to /admin/api/*, regardless of which one', async () => {
+    const response = await proxy(makeRequest('https://admin.bizlinkafrica.net/api/inquiries', 'admin.bizlinkafrica.net'));
+    // Not caught by the admin-area gate at all (would 307 to /admin/login
+    // if it had been incorrectly rewritten to /admin/api/inquiries).
+    expect(response.status).not.toBe(307);
+  });
+
+  it('still correctly rewrites a bare PAGE path on the admin host into the /admin tree (the original, intended behaviour is unaffected)', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } });
+    const response = await proxy(makeRequest('https://admin.bizlinkafrica.net/ceo', 'admin.bizlinkafrica.net'));
+    // /ceo is neither /admin/* nor /api/* in its raw form, so it should
+    // still be rewritten to /admin/ceo and pass through the auth gate
+    // (200, since a session is present here) rather than 404ing as an
+    // unknown top-level route.
+    expect(response.status).toBe(200);
+  });
+});
+
 describe('proxy — /merchant/* gate (independent auth pool from staff)', () => {
   beforeEach(() => {
     process.env.VERCEL_ENV = 'production';
