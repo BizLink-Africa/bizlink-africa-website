@@ -27,7 +27,7 @@ export default function Footer() {
             Empowering African businesses through world-class AI automation and digital infrastructure.
           </p>
           <p className="text-xs text-[#aeb1b1] leading-relaxed">
-            BizLink Africa Limited provides ICT infrastructure, automation systems, and integration support. We do not hold or settle client funds.
+            BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners.
           </p>
         </div>
 

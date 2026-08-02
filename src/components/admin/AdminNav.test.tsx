@@ -15,6 +15,7 @@ vi.mock('next/link', () => ({
 let mockPathname = '/admin';
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const ZERO_BADGE_COUNTS: Record<BadgeKey, number> = {
@@ -30,6 +31,7 @@ const ZERO_BADGE_COUNTS: Record<BadgeKey, number> = {
   failedWebhooks: 0,
   failedJobs: 0,
   activeIncidents: 0,
+  pendingApprovalWorkflowActions: 0,
 };
 
 // Super Admin holds every permission referenced anywhere in NAV_GROUPS, so

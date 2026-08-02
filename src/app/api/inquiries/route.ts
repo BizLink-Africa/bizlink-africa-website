@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendInquiryNotificationEmail } from '@/lib/email/resend';
-import { REQUESTED_SOLUTIONS, PREFERRED_CONTACT_METHODS } from '@/data/inquiries';
+import { inquirySchema, MERCHANT_SOLUTION_VALUE } from '@/lib/validation/inquiry';
 import { getPostHogClient } from '@/lib/posthog-server';
-
-const VALID_SOLUTIONS = new Set<string>(REQUESTED_SOLUTIONS.map((s) => s.value));
-const VALID_CONTACT_METHODS = new Set<string>(PREFERRED_CONTACT_METHODS.map((m) => m.value));
-
-const MAX_TEXT_LENGTH = 200;
-const MAX_MESSAGE_LENGTH = 5000;
 
 // Public route, no auth barrier — cap submissions per IP to stop spam/abuse
 // (each submission does a DB insert and sends a real email via Resend).
@@ -29,10 +23,6 @@ function corsHeaders(origin: string | null): HeadersInit {
   return origin && ALLOWED_ORIGINS.has(origin)
     ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
     : {};
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function getClientIp(request: Request): string {
@@ -57,6 +47,11 @@ export async function POST(request: Request) {
     NextResponse.json(body, { status, headers: responseHeaders });
   const badRequest = (message: string) => jsonResponse({ success: false, message }, 400);
   const tooManyRequests = (message: string) => jsonResponse({ success: false, message }, 429);
+  const genericSuccess = () =>
+    jsonResponse({
+      success: true,
+      message: 'Thank you for reaching out. Our team will review your application and contact you shortly.',
+    });
 
   const ipAddress = getClientIp(request);
   const supabase = createServiceClient();
@@ -81,55 +76,28 @@ export async function POST(request: Request) {
     return badRequest('Invalid request body.');
   }
 
-  const fullName = typeof body.fullName === 'string' ? body.fullName.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const businessName = typeof body.businessName === 'string' ? body.businessName.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const email = typeof body.email === 'string' ? body.email.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const phone = typeof body.phone === 'string' ? body.phone.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const businessType = typeof body.businessType === 'string' ? body.businessType.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const location = typeof body.location === 'string' ? body.location.trim().slice(0, MAX_TEXT_LENGTH) : '';
-  const message = typeof body.message === 'string' ? body.message.trim().slice(0, MAX_MESSAGE_LENGTH) : '';
-  const preferredContactMethod = typeof body.preferredContactMethod === 'string' ? body.preferredContactMethod : '';
-  const requestedSolution = Array.isArray(body.requestedSolution)
-    ? body.requestedSolution.filter((v): v is string => typeof v === 'string')
-    : [];
-  const consentGiven = body.consentGiven === true;
-
-  // Server-side validation of every required field — the public form must
-  // never be trusted to have enforced this itself.
-  if (
-    !isNonEmptyString(fullName) ||
-    !isNonEmptyString(businessName) ||
-    !isNonEmptyString(email) ||
-    !isNonEmptyString(phone) ||
-    !isNonEmptyString(businessType) ||
-    !isNonEmptyString(location)
-  ) {
-    return badRequest('Please fill in all required fields.');
+  // Honeypot: a hidden field real users never see or fill (visually hidden
+  // off-screen on the form). Any value here means an automated submission —
+  // pretend success without persisting or emailing anyone, so the bot gets
+  // no signal to adapt against.
+  if (typeof body.website === 'string' && body.website.trim().length > 0) {
+    return genericSuccess();
   }
 
-  if (!/^\S+@\S+\.\S+$/.test(email)) {
-    return badRequest('Please provide a valid email address.');
+  const parsed = inquirySchema.safeParse(body);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    return badRequest(firstIssue?.message ?? 'Please check the form and try again.');
   }
-
-  if (requestedSolution.length === 0 || !requestedSolution.every((s) => VALID_SOLUTIONS.has(s))) {
-    return badRequest('Please select at least one solution you need.');
-  }
-
-  if (preferredContactMethod && !VALID_CONTACT_METHODS.has(preferredContactMethod)) {
-    return badRequest('Invalid preferred contact method.');
-  }
-
-  if (!consentGiven) {
-    return badRequest('Please confirm BizLink Africa may contact you about your inquiry.');
-  }
+  const data = parsed.data;
 
   // Prevent duplicate rapid submissions (e.g. double-clicking submit).
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const { data: recentDuplicate } = await supabase
     .from('website_leads')
     .select('id')
-    .eq('email', email)
-    .eq('business_name', businessName)
+    .eq('email', data.email)
+    .eq('business_name', data.businessName)
     .gte('created_at', twoMinutesAgo)
     .limit(1)
     .maybeSingle();
@@ -141,22 +109,35 @@ export async function POST(request: Request) {
     });
   }
 
+  // Merchant preliminary fields are only ever persisted alongside the
+  // Merchant Payment Infrastructure solution — never on unrelated inquiries.
+  const isMerchantApplication = data.requestedSolution.includes(MERCHANT_SOLUTION_VALUE);
+
   const { data: inserted, error: insertError } = await supabase
     .from('website_leads')
     .insert({
-      full_name: fullName,
-      business_name: businessName,
-      email,
-      phone,
-      business_type: businessType,
-      location,
-      requested_solution: requestedSolution,
-      message: message || null,
-      preferred_contact_method: preferredContactMethod || null,
-      consent_given: consentGiven,
+      full_name: data.fullName,
+      business_name: data.businessName,
+      email: data.email,
+      phone: data.phone,
+      business_type: data.businessType,
+      location: data.location,
+      requested_solution: data.requestedSolution,
+      message: data.message || null,
+      preferred_contact_method: data.preferredContactMethod || null,
+      consent_given: data.consentGiven,
       status: 'new',
       notification_status: 'pending',
+      merchant_business_registration_status: isMerchantApplication ? data.merchantBusinessRegistrationStatus || null : null,
+      merchant_business_type: isMerchantApplication ? data.merchantBusinessType || null : null,
+      merchant_monthly_volume_range: isMerchantApplication ? data.merchantMonthlyVolumeRange || null : null,
+      merchant_settlement_destination: isMerchantApplication ? data.merchantSettlementDestination || null : null,
+      merchant_current_collection_method: isMerchantApplication ? data.merchantCurrentCollectionMethod || null : null,
+      merchant_business_locations_count: isMerchantApplication ? data.merchantBusinessLocationsCount ?? null : null,
+      merchant_golive_timeline: isMerchantApplication ? data.merchantGoLiveTimeline || null : null,
+      merchant_accuracy_confirmed: isMerchantApplication ? data.merchantAccuracyConfirmed === true : false,
     })
+    // created_at is server-generated (db default now()), never client-supplied — the audit-friendly submission timestamp.
     .select('id, created_at')
     .single();
 
@@ -180,9 +161,10 @@ export async function POST(request: Request) {
       distinctId,
       event: 'inquiry_received',
       properties: {
-        solutions_requested: requestedSolution,
-        preferred_contact_method: preferredContactMethod || null,
-        has_message: message.length > 0,
+        solutions_requested: data.requestedSolution,
+        preferred_contact_method: data.preferredContactMethod || null,
+        has_message: (data.message ?? '').length > 0,
+        is_merchant_payment_infrastructure: isMerchantApplication,
       },
     });
     await posthogClient.flush();
@@ -191,15 +173,15 @@ export async function POST(request: Request) {
   // The inquiry is saved. Everything from here on is best-effort — email
   // failures must not lose the lead or fail the request for the client.
   const emailResult = await sendInquiryNotificationEmail({
-    fullName,
-    businessName,
-    email,
-    phone,
-    businessType,
-    location,
-    requestedSolution,
-    message,
-    preferredContactMethod,
+    fullName: data.fullName,
+    businessName: data.businessName,
+    email: data.email,
+    phone: data.phone,
+    businessType: data.businessType,
+    location: data.location,
+    requestedSolution: data.requestedSolution,
+    message: data.message ?? '',
+    preferredContactMethod: data.preferredContactMethod ?? '',
     createdAt: new Date(inserted.created_at),
   });
 

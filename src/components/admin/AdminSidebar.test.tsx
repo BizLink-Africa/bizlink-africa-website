@@ -15,6 +15,7 @@ vi.mock('next/link', () => ({
 vi.mock('next/navigation', () => ({
   usePathname: () => '/admin',
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -34,6 +35,7 @@ const ZERO_BADGE_COUNTS: Record<BadgeKey, number> = {
   failedWebhooks: 0,
   failedJobs: 0,
   activeIncidents: 0,
+  pendingApprovalWorkflowActions: 0,
 };
 
 const LONG_EMAIL = 'a-very-long-staff-email-address-for-truncation-testing@bizlinkafrica.net';

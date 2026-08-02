@@ -1,5 +1,9 @@
 import 'server-only';
+import { randomUUID } from 'node:crypto';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+
+type AuditSupabaseClient = Pick<Awaited<ReturnType<typeof createClient>>, 'from'>;
 
 interface AuditEventInput {
   performedBy: string;
@@ -9,6 +13,37 @@ interface AuditEventInput {
   oldValue?: unknown;
   newValue?: unknown;
   result?: 'success' | 'failure';
+  // "Record actor, role, action, module, record, old values, new values,
+  // reason, timestamp, IP, user agent, correlation ID." role/ip/user
+  // agent/correlationId are auto-populated below when omitted — no
+  // existing call site needs to change. reason has no safe default (it's
+  // only meaningful when the caller actually has one), so it stays opt-in.
+  reason?: string;
+  role?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  correlationId?: string;
+  // Defaults to the cookie-bound RLS client (correct for the ~40 staff
+  // call sites). audit_logs INSERT is gated by is_active_staff(), so a
+  // non-staff writer (e.g. the merchant terms-acceptance action) must pass
+  // a service-role client here instead, or the write is silently rejected
+  // by RLS (logAuditEvent never throws — see below).
+  client?: AuditSupabaseClient;
+}
+
+// Best-effort — headers() is only available inside an active request scope
+// (Server Action, Route Handler, Server Component render). If this is ever
+// called outside one (it currently never is), fall back to nulls rather
+// than throwing, since a failed audit write must never break the caller.
+async function captureRequestContext(): Promise<{ ipAddress: string | null; userAgent: string | null }> {
+  try {
+    const headerList = await headers();
+    const forwardedFor = headerList.get('x-forwarded-for');
+    const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : headerList.get('x-real-ip');
+    return { ipAddress: ipAddress ?? null, userAgent: headerList.get('user-agent') };
+  } catch {
+    return { ipAddress: null, userAgent: null };
+  }
 }
 
 // Coarser grouping than `module` for the Audit Logs "Record type" filter —
@@ -28,6 +63,21 @@ const RECORD_TYPE_BY_MODULE: Record<string, string> = {
   expenses: 'finance', contracts: 'operations', support_tickets: 'support',
   integration_health: 'technology', ai_agent_configs: 'technology',
   governance_analytics: 'governance', governance_reports: 'governance',
+  merchant_terms_acceptances: 'compliance',
+  merchants: 'compliance', merchant_documents: 'compliance', merchant_document_files: 'compliance',
+  merchant_data_processing_consent: 'compliance', merchant_kyc_reviews: 'compliance',
+  merchant_beneficiary_change_requests: 'compliance', merchant_settlement_beneficiaries: 'compliance',
+  collection_import_batches: 'finance', collection_transactions: 'finance',
+  collection_reconciliation_runs: 'finance', collection_manual_adjustments: 'finance',
+  commission_fee_rules: 'finance', commission_fee_rule_tiers: 'finance',
+  settlement_batches: 'finance', settlement_batch_lines: 'finance',
+  settlement_batch_exclusions: 'finance', settlement_batch_events: 'finance',
+  merchant_payouts: 'finance', merchant_payout_events: 'finance',
+  chargeback_cases: 'compliance', chargeback_case_events: 'compliance', chargeback_evidence_items: 'compliance',
+  settlement_holds: 'compliance', settlement_hold_events: 'compliance',
+  manual_reversal_requests: 'finance',
+  merchant_statements: 'finance', financial_reports: 'finance',
+  selcom_integration: 'technology', selcom_callback: 'finance',
 };
 
 function deriveRecordType(module: string): string {
@@ -37,7 +87,25 @@ function deriveRecordType(module: string): string {
 // Never throws — a failed audit write must not break the mutation that
 // triggered it. Failures are just logged server-side.
 export async function logAuditEvent(input: AuditEventInput): Promise<void> {
-  const supabase = await createClient();
+  const supabase = input.client ?? (await createClient());
+
+  let role = input.role ?? null;
+  if (!role) {
+    // Best-effort — performedBy is usually an email (staff) but can be a
+    // non-staff identifier (e.g. a merchant), in which case this simply
+    // finds nothing and role stays null rather than erroring.
+    const { data: staffProfile } = await supabase
+      .from('staff_profiles')
+      .select('role')
+      .eq('email', input.performedBy)
+      .maybeSingle();
+    role = staffProfile?.role ?? null;
+  }
+
+  const { ipAddress, userAgent } = input.ipAddress || input.userAgent
+    ? { ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null }
+    : await captureRequestContext();
+
   const { error } = await supabase.from('audit_logs').insert({
     performed_by: input.performedBy,
     action_type: input.actionType,
@@ -47,6 +115,11 @@ export async function logAuditEvent(input: AuditEventInput): Promise<void> {
     new_value: input.newValue ?? null,
     result: input.result ?? 'success',
     record_type: deriveRecordType(input.module),
+    role,
+    reason: input.reason ?? null,
+    ip_address: ipAddress,
+    user_agent: userAgent,
+    correlation_id: input.correlationId ?? randomUUID(),
   });
 
   if (error) {

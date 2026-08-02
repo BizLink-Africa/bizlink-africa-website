@@ -16,6 +16,7 @@ const REQUIRED_ENV_VARS = [
   'RESEND_FROM_EMAIL',
   'BIZLINK_NOTIFICATION_EMAIL',
   'PROVISIONING_ENCRYPTION_KEY',
+  'BENEFICIARY_ENCRYPTION_KEY',
 ] as const;
 
 // Only enforced in the real Vercel production environment (VERCEL_ENV is

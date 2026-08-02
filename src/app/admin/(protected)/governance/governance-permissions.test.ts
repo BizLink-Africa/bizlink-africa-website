@@ -21,6 +21,7 @@ describe('Governance — sidebar permission matches page enforcement', () => {
     '/admin/governance/departments': 'departments/page.tsx',
     '/admin/governance/approval-workflows': 'approval-workflows/page.tsx',
     '/admin/compliance/access-reviews': '../compliance/access-reviews/page.tsx',
+    '/admin/governance/access-review': 'access-review/page.tsx',
     '/admin/governance/analytics': 'analytics/page.tsx',
     '/admin/governance/audit-summary': 'audit-summary/page.tsx',
     '/admin/governance/reports': 'reports/page.tsx',

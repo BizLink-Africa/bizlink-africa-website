@@ -1,10 +1,21 @@
 'use client';
 
 import Image from 'next/image';
-import { Mail, Phone, MapPin, Send, MessageCircle, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Phone, MapPin, Send, MessageCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { COMPANY } from '@/data/website';
-import { REQUESTED_SOLUTIONS, PREFERRED_CONTACT_METHODS } from '@/data/inquiries';
+import {
+  REQUESTED_SOLUTIONS,
+  PREFERRED_CONTACT_METHODS,
+  MERCHANT_SOLUTION_VALUE,
+  MERCHANT_BUSINESS_REGISTRATION_STATUSES,
+  MERCHANT_BUSINESS_TYPES,
+  MERCHANT_MONTHLY_VOLUME_RANGES,
+  MERCHANT_SETTLEMENT_DESTINATIONS,
+  MERCHANT_COLLECTION_METHODS,
+  MERCHANT_GOLIVE_TIMELINES,
+} from '@/data/inquiries';
+import { inquirySchema, firstFieldErrors } from '@/lib/validation/inquiry';
 import posthog from 'posthog-js';
 
 // Metadata must be in a server component — using a separate export via generateMetadata isn't possible in a client component.
@@ -21,6 +32,15 @@ const initialForm = {
   preferredContactMethod: '',
   message: '',
   consentGiven: false,
+  website: '', // honeypot — must stay empty; hidden from real users
+  merchantBusinessRegistrationStatus: '',
+  merchantBusinessType: '',
+  merchantMonthlyVolumeRange: '',
+  merchantSettlementDestination: '',
+  merchantCurrentCollectionMethod: '',
+  merchantBusinessLocationsCount: '',
+  merchantGoLiveTimeline: '',
+  merchantAccuracyConfirmed: false,
 };
 
 export default function ContactPage() {
@@ -28,10 +48,15 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const submittingRef = useRef(false);
+
+  const isMerchantSelected = form.requestedSolution.includes(MERCHANT_SOLUTION_VALUE);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev));
   };
 
   const handleSolutionToggle = (value: string) => {
@@ -41,34 +66,33 @@ export default function ContactPage() {
         ? prev.requestedSolution.filter((v) => v !== value)
         : [...prev.requestedSolution, value],
     }));
+    setFieldErrors((prev) => (prev.requestedSolution ? { ...prev, requestedSolution: '' } : prev));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (
-      !form.fullName ||
-      !form.businessName ||
-      !form.businessType ||
-      !form.location ||
-      !form.phone ||
-      !form.email
-    ) {
-      setErrorMessage('Please fill in all required fields.');
+    // Guards a fast double-click: React state updates are async, so
+    // `submitting` alone can't stop a second submit fired before the first
+    // re-render lands. This ref check is synchronous.
+    if (submittingRef.current) return;
+
+    const payload = {
+      ...form,
+      merchantBusinessLocationsCount:
+        form.merchantBusinessLocationsCount === '' ? undefined : Number(form.merchantBusinessLocationsCount),
+    };
+
+    const parsed = inquirySchema.safeParse(payload);
+    if (!parsed.success) {
+      setFieldErrors(firstFieldErrors(parsed.error));
+      setErrorMessage(parsed.error.issues[0]?.message ?? 'Please check the form and try again.');
       return;
     }
+    setFieldErrors({});
 
-    if (form.requestedSolution.length === 0) {
-      setErrorMessage('Please select at least one solution you need.');
-      return;
-    }
-
-    if (!form.consentGiven) {
-      setErrorMessage('Please confirm BizLink Africa may contact you about your inquiry.');
-      return;
-    }
-
+    submittingRef.current = true;
     setSubmitting(true);
     let result: { success: boolean; message: string };
     try {
@@ -79,12 +103,13 @@ export default function ContactPage() {
       const response = await fetch('/api/inquiries', {
         method: 'POST',
         headers,
-        body: JSON.stringify(form),
+        body: JSON.stringify(parsed.data),
       });
       result = await response.json();
     } catch {
       result = { success: false, message: 'Something went wrong submitting your inquiry. Please try again.' };
     }
+    submittingRef.current = false;
     setSubmitting(false);
 
     if (!result.success) {
@@ -100,6 +125,7 @@ export default function ContactPage() {
       solutions_requested: form.requestedSolution,
       preferred_contact_method: form.preferredContactMethod,
       has_message: form.message.length > 0,
+      is_merchant_payment_infrastructure: isMerchantSelected,
     });
 
     setForm(initialForm);
@@ -110,6 +136,8 @@ export default function ContactPage() {
     'w-full bg-transparent border-b border-[#bfc9c4] py-3 focus:border-[#00342b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2 text-[#1b1c1c] text-sm placeholder:text-[#aeb1b1] transition-colors';
 
   const labelClass = 'block text-xs font-semibold text-[#707975] uppercase tracking-wider mb-1';
+
+  const errorClass = 'text-xs text-red-700 mt-1.5';
 
   const linkFocusClass = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2 rounded-sm';
 
@@ -145,7 +173,21 @@ export default function ContactPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-8 relative">
+                {/* Honeypot — hidden from real users; a filled value flags a bot. */}
+                <div className="absolute -left-[9999px] w-px h-px overflow-hidden" aria-hidden="true">
+                  <label htmlFor="website">Leave this field empty</label>
+                  <input
+                    type="text"
+                    id="website"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={form.website}
+                    onChange={handleChange}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className={labelClass} htmlFor="fullName">Full Name</label>
@@ -159,6 +201,7 @@ export default function ContactPage() {
                       onChange={handleChange}
                       className={inputClass}
                     />
+                    {fieldErrors.fullName && <p className={errorClass}>{fieldErrors.fullName}</p>}
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="businessName">Business / Company Name</label>
@@ -172,6 +215,7 @@ export default function ContactPage() {
                       onChange={handleChange}
                       className={inputClass}
                     />
+                    {fieldErrors.businessName && <p className={errorClass}>{fieldErrors.businessName}</p>}
                   </div>
                 </div>
 
@@ -187,6 +231,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     className={inputClass}
                   />
+                  {fieldErrors.businessType && <p className={errorClass}>{fieldErrors.businessType}</p>}
                 </div>
 
                 <div>
@@ -201,6 +246,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     className={inputClass}
                   />
+                  {fieldErrors.location && <p className={errorClass}>{fieldErrors.location}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -216,6 +262,7 @@ export default function ContactPage() {
                       onChange={handleChange}
                       className={inputClass}
                     />
+                    {fieldErrors.phone && <p className={errorClass}>{fieldErrors.phone}</p>}
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="email">Email Address</label>
@@ -229,6 +276,7 @@ export default function ContactPage() {
                       onChange={handleChange}
                       className={inputClass}
                     />
+                    {fieldErrors.email && <p className={errorClass}>{fieldErrors.email}</p>}
                   </div>
                 </div>
 
@@ -248,7 +296,166 @@ export default function ContactPage() {
                       </label>
                     ))}
                   </div>
+                  {fieldErrors.requestedSolution && <p className={errorClass}>{fieldErrors.requestedSolution}</p>}
                 </div>
+
+                {isMerchantSelected && (
+                  <div className="border-t border-[#bfc9c4] pt-8">
+                    <p className="text-xs font-semibold text-[#00342b] uppercase tracking-wider mb-1">
+                      Merchant Payment Infrastructure — Preliminary Details
+                    </p>
+                    <p className="text-xs text-[#707975] leading-relaxed mb-5">
+                      Preliminary business information only. Bank account numbers, mobile-wallet numbers, and KYC documents are never collected here — those are handled later through a secure, protected onboarding process.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className={labelClass} htmlFor="merchantBusinessRegistrationStatus">Business Registration Status</label>
+                        <select
+                          id="merchantBusinessRegistrationStatus"
+                          name="merchantBusinessRegistrationStatus"
+                          value={form.merchantBusinessRegistrationStatus}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select an option</option>
+                          {MERCHANT_BUSINESS_REGISTRATION_STATUSES.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        {fieldErrors.merchantBusinessRegistrationStatus && <p className={errorClass}>{fieldErrors.merchantBusinessRegistrationStatus}</p>}
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="merchantBusinessType">Business Type</label>
+                        <select
+                          id="merchantBusinessType"
+                          name="merchantBusinessType"
+                          value={form.merchantBusinessType}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select an option</option>
+                          {MERCHANT_BUSINESS_TYPES.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        {fieldErrors.merchantBusinessType && <p className={errorClass}>{fieldErrors.merchantBusinessType}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div>
+                        <label className={labelClass} htmlFor="merchantMonthlyVolumeRange">Estimated Monthly Transaction Volume</label>
+                        <select
+                          id="merchantMonthlyVolumeRange"
+                          name="merchantMonthlyVolumeRange"
+                          value={form.merchantMonthlyVolumeRange}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select a range</option>
+                          {MERCHANT_MONTHLY_VOLUME_RANGES.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        {fieldErrors.merchantMonthlyVolumeRange && <p className={errorClass}>{fieldErrors.merchantMonthlyVolumeRange}</p>}
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="merchantCurrentCollectionMethod">Current Payment Collection Method</label>
+                        <select
+                          id="merchantCurrentCollectionMethod"
+                          name="merchantCurrentCollectionMethod"
+                          value={form.merchantCurrentCollectionMethod}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select an option</option>
+                          {MERCHANT_COLLECTION_METHODS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        {fieldErrors.merchantCurrentCollectionMethod && <p className={errorClass}>{fieldErrors.merchantCurrentCollectionMethod}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div>
+                        <label className={labelClass} htmlFor="merchantBusinessLocationsCount">Number of Business Locations / Branches</label>
+                        <input
+                          id="merchantBusinessLocationsCount"
+                          name="merchantBusinessLocationsCount"
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="e.g. 1"
+                          value={form.merchantBusinessLocationsCount}
+                          onChange={handleChange}
+                          className={inputClass}
+                        />
+                        {fieldErrors.merchantBusinessLocationsCount && <p className={errorClass}>{fieldErrors.merchantBusinessLocationsCount}</p>}
+                      </div>
+                      <div>
+                        <label className={labelClass} htmlFor="merchantGoLiveTimeline">Expected Go-Live Timeline</label>
+                        <select
+                          id="merchantGoLiveTimeline"
+                          name="merchantGoLiveTimeline"
+                          value={form.merchantGoLiveTimeline}
+                          onChange={handleChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select an option</option>
+                          {MERCHANT_GOLIVE_TIMELINES.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        {fieldErrors.merchantGoLiveTimeline && <p className={errorClass}>{fieldErrors.merchantGoLiveTimeline}</p>}
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <p className={labelClass}>Preferred Settlement Destination</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2">
+                        {MERCHANT_SETTLEMENT_DESTINATIONS.map((o) => (
+                          <label key={o.value} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="merchantSettlementDestination"
+                              value={o.value}
+                              checked={form.merchantSettlementDestination === o.value}
+                              onChange={handleChange}
+                              className="w-4 h-4 accent-[#00342b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2"
+                            />
+                            <span className="text-sm text-[#1b1c1c]">{o.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {fieldErrors.merchantSettlementDestination && <p className={errorClass}>{fieldErrors.merchantSettlementDestination}</p>}
+                    </div>
+
+                    <label className="flex items-start gap-3 py-1 mt-6 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.merchantAccuracyConfirmed}
+                        onChange={(e) => {
+                          setForm((prev) => ({ ...prev, merchantAccuracyConfirmed: e.target.checked }));
+                          setFieldErrors((prev) => (prev.merchantAccuracyConfirmed ? { ...prev, merchantAccuracyConfirmed: '' } : prev));
+                        }}
+                        className="w-5 h-5 shrink-0 accent-[#00342b] mt-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2 rounded-sm"
+                      />
+                      <span className="text-sm text-[#3f4945]">
+                        I confirm that the information submitted is accurate and I understand that merchant activation is subject to business verification, KYC approval and applicable service terms.
+                      </span>
+                    </label>
+                    {fieldErrors.merchantAccuracyConfirmed && <p className={errorClass}>{fieldErrors.merchantAccuracyConfirmed}</p>}
+
+                    <div className="mt-6 flex items-start gap-2 bg-[#afefdd]/10 border border-[#afefdd] p-4">
+                      <ShieldCheck size={16} className="text-[#00342b] mt-0.5 shrink-0" />
+                      <p className="text-xs text-[#3f4945] leading-relaxed">
+                        Final KYC, till/payment-account activation and settlement are subject to review and approval by the approved payment infrastructure partner and are not guaranteed.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass} htmlFor="preferredContactMethod">Preferred Contact Method</label>
@@ -279,17 +486,23 @@ export default function ContactPage() {
                   />
                 </div>
 
-                <label className="flex items-start gap-3 py-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.consentGiven}
-                    onChange={(e) => setForm((prev) => ({ ...prev, consentGiven: e.target.checked }))}
-                    className="w-5 h-5 shrink-0 accent-[#00342b] mt-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2 rounded-sm"
-                  />
-                  <span className="text-sm text-[#3f4945]">
-                    I agree that BizLink Africa may contact me about this inquiry.
-                  </span>
-                </label>
+                <div>
+                  <label className="flex items-start gap-3 py-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.consentGiven}
+                      onChange={(e) => {
+                        setForm((prev) => ({ ...prev, consentGiven: e.target.checked }));
+                        setFieldErrors((prev) => (prev.consentGiven ? { ...prev, consentGiven: '' } : prev));
+                      }}
+                      className="w-5 h-5 shrink-0 accent-[#00342b] mt-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2 rounded-sm"
+                    />
+                    <span className="text-sm text-[#3f4945]">
+                      I agree that BizLink Africa may contact me about this inquiry.
+                    </span>
+                  </label>
+                  {fieldErrors.consentGiven && <p className={errorClass}>{fieldErrors.consentGiven}</p>}
+                </div>
 
                 {errorMessage && (
                   <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-3">

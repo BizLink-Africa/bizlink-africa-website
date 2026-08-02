@@ -112,6 +112,55 @@ describe('proxy — production host enforcement', () => {
   });
 });
 
+describe('proxy — /merchant/* gate (independent auth pool from staff)', () => {
+  beforeEach(() => {
+    process.env.VERCEL_ENV = 'production';
+  });
+
+  it('redirects an unauthenticated request to /merchant/onboarding/terms into /merchant/login', async () => {
+    const response = await proxy(
+      makeRequest('https://bizlinkafrica.net/merchant/onboarding/terms', 'bizlinkafrica.net')
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/merchant/login');
+  });
+
+  it('lets an unauthenticated request through to /merchant/login itself', async () => {
+    const response = await proxy(makeRequest('https://bizlinkafrica.net/merchant/login', 'bizlinkafrica.net'));
+    expect(response.status).toBe(200);
+  });
+
+  it('redirects an already-authenticated visit to /merchant/login straight to the terms page', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'merchant-user-1' } } });
+    const response = await proxy(makeRequest('https://bizlinkafrica.net/merchant/login', 'bizlinkafrica.net'));
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/merchant/onboarding/terms');
+    // Merchant redirects never touch staff_profiles — a merchant session has no such row.
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('lets an authenticated request through to a protected /merchant/* page', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'merchant-user-1' } } });
+    const response = await proxy(
+      makeRequest('https://bizlinkafrica.net/merchant/onboarding/terms', 'bizlinkafrica.net')
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it('sets X-Robots-Tag noindex on merchant responses', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'merchant-user-1' } } });
+    const response = await proxy(
+      makeRequest('https://bizlinkafrica.net/merchant/onboarding/terms', 'bizlinkafrica.net')
+    );
+    expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
+  });
+
+  it('/merchant/* is reachable on the public host even under the production host allow-list', async () => {
+    const response = await proxy(makeRequest('https://www.bizlinkafrica.net/merchant/login', 'www.bizlinkafrica.net'));
+    expect(response.status).toBe(200);
+  });
+});
+
 describe('proxy — non-production (dev/preview) is unrestricted by the host allow-list', () => {
   it('does not reject an unrecognized host when VERCEL_ENV is not "production"', async () => {
     delete process.env.VERCEL_ENV;

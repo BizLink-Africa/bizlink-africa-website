@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: '%s | BizLink Africa Limited',
   },
   description:
-    'BizLink Africa Limited helps startups, SMEs, and digital businesses automate customer engagement, social commerce, business workflows, and payment integration support through trusted payment partners.',
+    'BizLink Africa Limited helps startups, SMEs, and digital businesses automate customer engagement, social commerce, business workflows, and merchant payment integration, reconciliation and settlement through approved payment infrastructure partners.',
   keywords: ['AI automation', 'payment integration', 'social commerce', 'Tanzania', 'East Africa', 'ICT consulting'],
   openGraph: {
     siteName: 'BizLink Africa Limited',

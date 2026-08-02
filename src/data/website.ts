@@ -20,7 +20,7 @@ export const COMPANY = {
 };
 
 export const COMPLIANCE_TEXT =
-  'BizLink Africa Limited provides ICT infrastructure, automation systems, and integration support only. BizLink Africa Limited does not hold, receive, control, or settle client funds. Payment collection and settlement are handled directly between each client and the approved payment partner.';
+  'BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners. Final merchant verification, payment processing and till or payment-account activation are subject to the requirements and approval of the applicable payment infrastructure partner.';
 
 export const SOLUTIONS = [
   {
@@ -52,14 +52,14 @@ export const SOLUTIONS = [
   {
     id: 'payment-integration',
     icon: 'CreditCard',
-    title: 'Enterprise Payment Integration Support',
+    title: 'Merchant Payment Integration & Settlement Support',
     description:
-      'Help businesses connect their platforms to trusted fintech payment infrastructure. Clients maintain their own merchant wallet/account, while settlements are handled directly by the approved payment partner.',
+      'BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners.',
     features: [
-      'Direct client merchant wallet setup',
-      'Trusted fintech payment infrastructure connection',
-      'Settlement handled directly by approved payment partner',
-      'No fund handling by BizLink Africa Limited',
+      'Merchant onboarding coordination',
+      'Payment-technology integration with approved infrastructure partners',
+      'Transaction reconciliation and settlement management',
+      'Final KYC and till/account activation subject to partner approval',
     ],
   },
   {
@@ -205,25 +205,25 @@ export const ADVANTAGES = [
   { icon: 'Bot', title: 'AI-powered business automation', desc: 'Cutting-edge AI tools integrated into your existing business workflows.' },
   { icon: 'ShoppingCart', title: 'Social commerce ready', desc: 'Native support for WhatsApp, Instagram, and Facebook selling flows.' },
   { icon: 'Shield', title: 'Secure payment integration support', desc: 'Connect to trusted fintech payment infrastructure with full compliance.' },
-  { icon: 'ArrowRightLeft', title: 'Direct settlement model', desc: 'Your funds go directly to your merchant account — we never touch them.' },
+  { icon: 'ArrowRightLeft', title: 'Reconciled settlement process', desc: 'We reconcile transactions and facilitate settlement to your verified merchant account according to agreed terms and schedules.' },
   { icon: 'Users', title: 'Offline onboarding support', desc: 'Our team handles all verification and onboarding documents in person.' },
 ];
 
 export const PARTNERSHIP_FEATURES = [
   {
     icon: 'Wallet',
-    title: 'Direct Client Wallet',
-    desc: 'Each client receives or maintains their own merchant wallet/account with the approved payment partner.',
+    title: 'Merchant Onboarding Coordination',
+    desc: 'We coordinate merchant onboarding; final verification and merchant till or account activation are completed by the approved payment infrastructure partner.',
   },
   {
-    icon: 'ShieldOff',
-    title: 'Zero-Touch Fund Management',
-    desc: 'BizLink Africa Limited does not hold, receive, control, or settle client funds.',
+    icon: 'ShieldCheck',
+    title: 'Controlled Merchant Settlement',
+    desc: 'BizLink Africa reconciles eligible merchant collections and facilitates settlement to verified merchant accounts according to agreed terms, schedules and compliance requirements.',
   },
   {
     icon: 'Building2',
-    title: 'Trusted Payment Infrastructure',
-    desc: 'We support businesses by connecting them to reliable payment infrastructure through trusted payment partners.',
+    title: 'Approved Payment Infrastructure',
+    desc: 'Merchant transactions are processed through approved, regulated payment infrastructure partners, with confidential commercial arrangements and audit-ready operational processes.',
   },
 ];
 

@@ -68,11 +68,15 @@ export async function proxy(request: NextRequest) {
         : `/admin${incomingPath}`
       : incomingPath;
 
-  // Everything below this point is the existing Supabase session gate,
-  // unchanged in behavior — it only runs for /admin/* traffic so public
-  // page views never pay for a cookie-based auth round trip they don't
-  // need.
-  if (!effectivePath.startsWith('/admin')) {
+  // Everything below this point is the Supabase session gate — it only
+  // runs for /admin/* or /merchant/* traffic so public page views never pay
+  // for a cookie-based auth round trip they don't need. /merchant/* is a
+  // second, independent auth pool (merchant_users, not staff_profiles) on
+  // the same public host — no host rewrite involved, just a path check.
+  const isAdminArea = effectivePath.startsWith('/admin');
+  const isMerchantArea = effectivePath.startsWith('/merchant');
+
+  if (!isAdminArea && !isMerchantArea) {
     return NextResponse.next();
   }
 
@@ -104,31 +108,48 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLoginRoute = effectivePath === '/admin/login';
-  // Staff invite links land here directly. Supabase appends the session as
-  // a URL fragment (#access_token=...), which never reaches the server —
-  // only the browser can see it. So this route must stay reachable with no
-  // cookie-based session yet; the page itself (client-side) picks up the
-  // fragment, establishes the session, then does its own auth check.
-  const isAcceptInviteRoute = effectivePath === '/admin/accept-invite';
+  if (isAdminArea) {
+    const isLoginRoute = effectivePath === '/admin/login';
+    // Staff invite links land here directly. Supabase appends the session as
+    // a URL fragment (#access_token=...), which never reaches the server —
+    // only the browser can see it. So this route must stay reachable with no
+    // cookie-based session yet; the page itself (client-side) picks up the
+    // fragment, establishes the session, then does its own auth check.
+    const isAcceptInviteRoute = effectivePath === '/admin/accept-invite';
 
-  if (!isLoginRoute && !isAcceptInviteRoute && !user) {
-    const loginUrl = new URL('/admin/login', request.url);
-    // A stale/expired sb- cookie was present but getUser() rejected it —
-    // distinct from a fresh visitor who was never signed in — so the login
-    // page can show "your session expired" instead of a blank sign-in form.
-    const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
-    if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
-    return NextResponse.redirect(loginUrl);
+    if (!isLoginRoute && !isAcceptInviteRoute && !user) {
+      const loginUrl = new URL('/admin/login', request.url);
+      // A stale/expired sb- cookie was present but getUser() rejected it —
+      // distinct from a fresh visitor who was never signed in — so the login
+      // page can show "your session expired" instead of a blank sign-in form.
+      const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+      if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (isLoginRoute && user) {
+      const { data: staff } = await supabase
+        .from('staff_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return NextResponse.redirect(new URL(getDashboardRouteForRole(staff?.role ?? null), request.url));
+    }
   }
 
-  if (isLoginRoute && user) {
-    const { data: staff } = await supabase
-      .from('staff_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    return NextResponse.redirect(new URL(getDashboardRouteForRole(staff?.role ?? null), request.url));
+  if (isMerchantArea) {
+    const isLoginRoute = effectivePath === '/merchant/login';
+
+    if (!isLoginRoute && !user) {
+      const loginUrl = new URL('/merchant/login', request.url);
+      const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+      if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (isLoginRoute && user) {
+      return NextResponse.redirect(new URL('/merchant/onboarding/terms', request.url));
+    }
   }
 
   // X-Robots-Tag is defense-in-depth, not a security control (see
