@@ -1,10 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 import { TOP_LEVEL_LEAVES, NAV_GROUPS, type BadgeKey, type NavGroup } from '@/data/navigation';
+
+// Matches the `lg` breakpoint already used for the drawer/overlay toggle in
+// AdminSidebar.tsx (Tailwind's default lg = 1024px) — below it, only one
+// top-level group may stay open at a time (accordion); at/above it, groups
+// toggle independently, as before.
+const MOBILE_QUERY = '(max-width: 1023px)';
+
+function matchMediaSupported(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+}
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => (matchMediaSupported() ? window.matchMedia(MOBILE_QUERY).matches : false));
+
+  useEffect(() => {
+    if (!matchMediaSupported()) return;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const handleChange = () => setIsMobile(mql.matches);
+    handleChange();
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
+
+  return isMobile;
+}
 
 // All nav hrefs, computed once — needed to detect when one item's href is a
 // path-prefix of another's (e.g. "/admin/finance" is a prefix of
@@ -16,19 +41,28 @@ const ALL_NAV_HREFS = [
   ...NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href)),
 ];
 
-// Exact match always counts. A prefix match (pathname is a real child path,
-// e.g. a detail page under a list page) only counts if no OTHER nav item's
-// href is a closer/more specific match for this pathname — otherwise a hub
-// page like "/admin/finance" would stay highlighted on every finance
-// sub-page, including its own siblings.
-function isActiveHref(pathname: string, href: string): boolean {
-  if (pathname === href) return true;
+// A handful of items (e.g. "Payout Approvals", "Failed Payouts") reuse an
+// existing list page's own status filter instead of being a new page, so
+// their nav href carries a query string (e.g. "/admin/payouts?status=failed").
+const QUERY_FILTERED_HREFS = new Set(ALL_NAV_HREFS.filter((h) => h.includes('?')));
+
+// currentFullPath includes the query string; pathname does not (Next's
+// usePathname() strips it). A query-filtered href only matches an exact
+// full-URL match — never a prefix, since it's always a leaf filter view.
+// A plain href matches exactly or by prefix as before, UNLESS a
+// query-filtered sibling is the exact current page, in which case that
+// more specific entry should be the one highlighted instead (e.g. viewing
+// "/admin/payouts?status=failed" must highlight "Failed Payouts", not the
+// plain "Merchant Payouts" entry that shares the same base path).
+function isActiveHref(pathname: string, currentFullPath: string, href: string): boolean {
+  if (href.includes('?')) return currentFullPath === href;
+  if (pathname === href) return !QUERY_FILTERED_HREFS.has(currentFullPath);
   if (!pathname.startsWith(`${href}/`)) return false;
   return !ALL_NAV_HREFS.some((other) => other !== href && (other === pathname || pathname.startsWith(`${other}/`)));
 }
 
-function groupContainsActivePath(group: NavGroup, pathname: string): boolean {
-  return group.items.some((item) => isActiveHref(pathname, item.href));
+function groupContainsActivePath(group: NavGroup, pathname: string, currentFullPath: string): boolean {
+  return group.items.some((item) => isActiveHref(pathname, currentFullPath, item.href));
 }
 
 function Badge({ count, label }: { count: number; label?: string }) {
@@ -46,7 +80,10 @@ function Badge({ count, label }: { count: number; label?: string }) {
 
 function NavLink({ href, label, badgeCount, onNavigate }: { href: string; label: string; badgeCount?: number; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const active = isActiveHref(pathname, href);
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const currentFullPath = search ? `${pathname}?${search}` : pathname;
+  const active = isActiveHref(pathname, currentFullPath, href);
   return (
     <Link
       href={href}
@@ -75,7 +112,11 @@ export default function AdminNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const currentFullPath = search ? `${pathname}?${search}` : pathname;
   const permissionSet = new Set(permissions);
+  const isMobile = useIsMobile();
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
@@ -85,15 +126,20 @@ export default function AdminNav({
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initiallyOpen = new Set<string>();
     for (const group of visibleGroups) {
-      if (groupContainsActivePath(group, pathname)) initiallyOpen.add(group.label);
+      if (groupContainsActivePath(group, pathname, currentFullPath)) initiallyOpen.add(group.label);
     }
     return initiallyOpen;
   });
 
+  // Below the lg breakpoint, opening a group closes every other one
+  // (accordion) so a long menu stays scannable on a phone-width drawer.
+  // At/above lg, groups toggle independently, as before.
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => {
+      const isOpen = prev.has(label);
+      if (isMobile) return isOpen ? new Set<string>() : new Set([label]);
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
+      if (isOpen) next.delete(label);
       else next.add(label);
       return next;
     });
@@ -108,7 +154,8 @@ export default function AdminNav({
       ))}
 
       {visibleGroups.map((group) => {
-        const isOpen = openGroups.has(group.label) || groupContainsActivePath(group, pathname);
+        const hasActiveItem = groupContainsActivePath(group, pathname, currentFullPath);
+        const isOpen = openGroups.has(group.label) || hasActiveItem;
         const groupBadgeTotal = group.items.reduce((sum, item) => {
           if (!item.badgeKey) return sum;
           return sum + (badgeCounts[item.badgeKey] ?? 0);
@@ -124,7 +171,9 @@ export default function AdminNav({
               aria-expanded={isOpen}
               aria-controls={panelId}
               title={group.label}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#94d3c1] hover:text-white transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#94d3c1] focus-visible:ring-offset-1 focus-visible:ring-offset-[#00342b]"
+              className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#94d3c1] focus-visible:ring-offset-1 focus-visible:ring-offset-[#00342b] ${
+                hasActiveItem ? 'text-white' : 'text-[#94d3c1] hover:text-white'
+              }`}
             >
               <Icon size={14} className="shrink-0" aria-hidden="true" />
               <span className="truncate">{group.label}</span>

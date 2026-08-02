@@ -1,13 +1,77 @@
+export const MERCHANT_SOLUTION_VALUE = 'merchant_payment_infrastructure' as const;
+
 export const REQUESTED_SOLUTIONS = [
   { value: 'ai_sales_agent', label: 'AI Sales Agent' },
   { value: 'ai_customer_care_agent', label: 'AI Customer Care Agent' },
   { value: 'social_commerce_platform', label: 'Social Commerce Platform' },
-  { value: 'payment_integration_support', label: 'Payment/API Integration Support' },
+  { value: 'payment_integration_support', label: 'Merchant Payment & Settlement Support' },
+  { value: MERCHANT_SOLUTION_VALUE, label: 'Merchant Payment Infrastructure' },
   { value: 'website_landing_page', label: 'Website or Landing Page' },
   { value: 'other', label: 'Other' },
 ] as const;
 
 export type RequestedSolution = (typeof REQUESTED_SOLUTIONS)[number]['value'];
+
+// Preliminary, non-sensitive fields collected only when "Merchant Payment
+// Infrastructure" is selected. No account numbers, wallet numbers, or KYC
+// documents — that happens later through a protected onboarding workflow.
+export const MERCHANT_BUSINESS_REGISTRATION_STATUSES = [
+  { value: 'registered', label: 'Registered Business' },
+  { value: 'in_process', label: 'Registration In Process' },
+  { value: 'not_registered', label: 'Not Yet Registered' },
+] as const;
+
+export type MerchantBusinessRegistrationStatus = (typeof MERCHANT_BUSINESS_REGISTRATION_STATUSES)[number]['value'];
+
+export const MERCHANT_BUSINESS_TYPES = [
+  { value: 'retail', label: 'Retail / Shop' },
+  { value: 'ecommerce', label: 'E-Commerce / Online Store' },
+  { value: 'service_provider', label: 'Service Provider' },
+  { value: 'restaurant_food', label: 'Restaurant / Food & Beverage' },
+  { value: 'wholesale_distribution', label: 'Wholesale / Distribution' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type MerchantBusinessType = (typeof MERCHANT_BUSINESS_TYPES)[number]['value'];
+
+export const MERCHANT_MONTHLY_VOLUME_RANGES = [
+  { value: 'under_5m', label: 'Under TZS 5,000,000' },
+  { value: '5m_20m', label: 'TZS 5,000,000 – 20,000,000' },
+  { value: '20m_50m', label: 'TZS 20,000,000 – 50,000,000' },
+  { value: '50m_200m', label: 'TZS 50,000,000 – 200,000,000' },
+  { value: 'above_200m', label: 'Above TZS 200,000,000' },
+] as const;
+
+export type MerchantMonthlyVolumeRange = (typeof MERCHANT_MONTHLY_VOLUME_RANGES)[number]['value'];
+
+export const MERCHANT_SETTLEMENT_DESTINATIONS = [
+  { value: 'bank_account', label: 'Bank Account' },
+  { value: 'mobile_wallet', label: 'Mobile Wallet' },
+  { value: 'not_decided', label: 'Not Decided Yet' },
+] as const;
+
+export type MerchantSettlementDestination = (typeof MERCHANT_SETTLEMENT_DESTINATIONS)[number]['value'];
+
+export const MERCHANT_COLLECTION_METHODS = [
+  { value: 'cash_only', label: 'Cash Only' },
+  { value: 'mobile_money_manual', label: 'Mobile Money (Manual)' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'existing_gateway', label: 'Existing Payment Gateway' },
+  { value: 'mixed_multiple', label: 'Mixed / Multiple Methods' },
+  { value: 'none_yet', label: 'None Yet' },
+] as const;
+
+export type MerchantCollectionMethod = (typeof MERCHANT_COLLECTION_METHODS)[number]['value'];
+
+export const MERCHANT_GOLIVE_TIMELINES = [
+  { value: 'immediately', label: 'Immediately' },
+  { value: 'within_1_month', label: 'Within 1 Month' },
+  { value: '1_3_months', label: '1 – 3 Months' },
+  { value: '3_6_months', label: '3 – 6 Months' },
+  { value: 'not_sure', label: 'Not Sure Yet' },
+] as const;
+
+export type MerchantGoLiveTimeline = (typeof MERCHANT_GOLIVE_TIMELINES)[number]['value'];
 
 export const PREFERRED_CONTACT_METHODS = [
   { value: 'phone', label: 'Phone Call' },
@@ -115,6 +179,14 @@ export interface Inquiry {
   lead_source: LeadSource | null;
   assigned_user_id: string | null;
   campaign_id: string | null;
+  merchant_business_registration_status: MerchantBusinessRegistrationStatus | null;
+  merchant_business_type: MerchantBusinessType | null;
+  merchant_monthly_volume_range: MerchantMonthlyVolumeRange | null;
+  merchant_settlement_destination: MerchantSettlementDestination | null;
+  merchant_current_collection_method: MerchantCollectionMethod | null;
+  merchant_business_locations_count: number | null;
+  merchant_golive_timeline: MerchantGoLiveTimeline | null;
+  merchant_accuracy_confirmed: boolean;
   created_at: string;
   updated_at: string;
 }

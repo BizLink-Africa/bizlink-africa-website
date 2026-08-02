@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
+import AccessDenied from '@/components/admin/AccessDenied';
 import { ONBOARDING_CHECKLIST_ITEMS, type OnboardingChecklistKey } from '@/data/clients';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +34,12 @@ export default async function OnboardingPage({
 }: {
   searchParams: Promise<{ view?: string }>;
 }) {
+  try {
+    await requirePermission('onboarding.view');
+  } catch {
+    return <AccessDenied requiredPermission="onboarding.view" />;
+  }
+
   const { view = 'pending' } = await searchParams;
   const supabase = await createClient();
 

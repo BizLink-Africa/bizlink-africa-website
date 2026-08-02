@@ -20,6 +20,8 @@ describe('Administration — sidebar permission matches page enforcement', () =>
     '/admin/staff': '../staff/page.tsx',
     '/admin/audit-logs': '../audit-logs/page.tsx',
     '/admin/notifications': '../notifications/page.tsx',
+    '/admin/settings/integrations/selcom': 'integrations/selcom/page.tsx',
+    '/admin/settings/integrations/selcom/production-readiness': 'integrations/selcom/production-readiness/page.tsx',
     '/admin/settings/company': 'company/page.tsx',
     '/admin/finance/settings': '../finance/settings/page.tsx',
     '/admin/settings/contracts': 'contracts/page.tsx',

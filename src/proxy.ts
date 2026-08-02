@@ -52,27 +52,48 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // On the admin host, every route the admin app cares about already lives
-  // under /admin/* (that's the existing convention this reuses rather than
-  // restructuring) — this rewrite just means the admin host's own root and
-  // any bare path resolve into that tree instead of falling through to the
-  // public marketing pages that happen to live at those same paths in this
-  // one shared app. Purely a routing rewrite: the browser's URL bar is
+  // On the admin host, every PAGE route the admin app cares about already
+  // lives under /admin/* (that's the existing convention this reuses rather
+  // than restructuring) — this rewrite just means the admin host's own root
+  // and any bare path resolve into that tree instead of falling through to
+  // the public marketing pages that happen to live at those same paths in
+  // this one shared app. Purely a routing rewrite: the browser's URL bar is
   // untouched, and every existing /admin/... link and redirect target in
   // the codebase keeps working exactly as it does today.
+  //
+  // /api/* is deliberately EXCLUDED from this rewrite. API routes are a
+  // flat namespace outside both the admin and public page trees, and every
+  // one of them already implements its own protection (a secret path
+  // segment for the Selcom callback, a bearer-token check for the
+  // status-check cron, CORS + field validation for the public inquiry
+  // route) — none of them expect or want a staff cookie session. Before
+  // this fix, a POST to e.g.
+  // https://admin.bizlinkafrica.net/api/integrations/selcom/callback/<secret>
+  // was rewritten to /admin/api/integrations/selcom/callback/<secret>,
+  // which the admin-area auth gate below then treated as an unauthenticated
+  // page request and redirected to /admin/login — meaning Selcom's server-
+  // to-server callback (which can never present a staff login session)
+  // would never reach the actual route handler at all, and the same was
+  // true for Vercel's cron trigger hitting /api/payouts/status-check-cron.
+  // Confirmed live against the deployed production admin host, not just in
+  // code review — see the production-readiness verification report.
   const isAdminHost = host === ADMIN_HOST;
   const effectivePath =
-    isAdminHost && !incomingPath.startsWith('/admin')
+    isAdminHost && !incomingPath.startsWith('/admin') && !incomingPath.startsWith('/api/')
       ? incomingPath === '/'
         ? '/admin'
         : `/admin${incomingPath}`
       : incomingPath;
 
-  // Everything below this point is the existing Supabase session gate,
-  // unchanged in behavior — it only runs for /admin/* traffic so public
-  // page views never pay for a cookie-based auth round trip they don't
-  // need.
-  if (!effectivePath.startsWith('/admin')) {
+  // Everything below this point is the Supabase session gate — it only
+  // runs for /admin/* or /merchant/* traffic so public page views never pay
+  // for a cookie-based auth round trip they don't need. /merchant/* is a
+  // second, independent auth pool (merchant_users, not staff_profiles) on
+  // the same public host — no host rewrite involved, just a path check.
+  const isAdminArea = effectivePath.startsWith('/admin');
+  const isMerchantArea = effectivePath.startsWith('/merchant');
+
+  if (!isAdminArea && !isMerchantArea) {
     return NextResponse.next();
   }
 
@@ -104,31 +125,48 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLoginRoute = effectivePath === '/admin/login';
-  // Staff invite links land here directly. Supabase appends the session as
-  // a URL fragment (#access_token=...), which never reaches the server —
-  // only the browser can see it. So this route must stay reachable with no
-  // cookie-based session yet; the page itself (client-side) picks up the
-  // fragment, establishes the session, then does its own auth check.
-  const isAcceptInviteRoute = effectivePath === '/admin/accept-invite';
+  if (isAdminArea) {
+    const isLoginRoute = effectivePath === '/admin/login';
+    // Staff invite links land here directly. Supabase appends the session as
+    // a URL fragment (#access_token=...), which never reaches the server —
+    // only the browser can see it. So this route must stay reachable with no
+    // cookie-based session yet; the page itself (client-side) picks up the
+    // fragment, establishes the session, then does its own auth check.
+    const isAcceptInviteRoute = effectivePath === '/admin/accept-invite';
 
-  if (!isLoginRoute && !isAcceptInviteRoute && !user) {
-    const loginUrl = new URL('/admin/login', request.url);
-    // A stale/expired sb- cookie was present but getUser() rejected it —
-    // distinct from a fresh visitor who was never signed in — so the login
-    // page can show "your session expired" instead of a blank sign-in form.
-    const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
-    if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
-    return NextResponse.redirect(loginUrl);
+    if (!isLoginRoute && !isAcceptInviteRoute && !user) {
+      const loginUrl = new URL('/admin/login', request.url);
+      // A stale/expired sb- cookie was present but getUser() rejected it —
+      // distinct from a fresh visitor who was never signed in — so the login
+      // page can show "your session expired" instead of a blank sign-in form.
+      const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+      if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (isLoginRoute && user) {
+      const { data: staff } = await supabase
+        .from('staff_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return NextResponse.redirect(new URL(getDashboardRouteForRole(staff?.role ?? null), request.url));
+    }
   }
 
-  if (isLoginRoute && user) {
-    const { data: staff } = await supabase
-      .from('staff_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    return NextResponse.redirect(new URL(getDashboardRouteForRole(staff?.role ?? null), request.url));
+  if (isMerchantArea) {
+    const isLoginRoute = effectivePath === '/merchant/login';
+
+    if (!isLoginRoute && !user) {
+      const loginUrl = new URL('/merchant/login', request.url);
+      const hadSupabaseCookie = request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+      if (hadSupabaseCookie) loginUrl.searchParams.set('expired', '1');
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (isLoginRoute && user) {
+      return NextResponse.redirect(new URL('/merchant/onboarding/terms', request.url));
+    }
   }
 
   // X-Robots-Tag is defense-in-depth, not a security control (see

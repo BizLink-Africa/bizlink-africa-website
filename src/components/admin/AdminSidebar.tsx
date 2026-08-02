@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
@@ -85,7 +85,9 @@ export default function AdminSidebar({
           </button>
         </div>
 
-        <AdminNav permissions={permissions} badgeCounts={badgeCounts} onNavigate={() => setMobileOpen(false)} />
+        <Suspense fallback={<div className="flex-1" />}>
+          <AdminNav permissions={permissions} badgeCounts={badgeCounts} onNavigate={() => setMobileOpen(false)} />
+        </Suspense>
 
         <div className="px-4 py-4 border-t border-white/10 space-y-3 shrink-0">
           <p className="text-[13px] text-[#dfe6e3] truncate" title={email}>{email}</p>

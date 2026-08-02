@@ -3,7 +3,7 @@ import Image from 'next/image';
 import {
   ArrowRight, Bot, ShoppingBag, CreditCard, Workflow, Laptop,
   MapPin, ShoppingCart, Shield, ArrowRightLeft, Users,
-  Wallet, ShieldOff, Building2, MessageCircle, CheckCircle,
+  Wallet, ShieldCheck, Building2, MessageCircle, CheckCircle,
   Zap, BadgeCheck, Check,
 } from 'lucide-react';
 import CTAButton from '@/components/website/CTAButton';
@@ -16,7 +16,7 @@ const ADVANTAGE_ICONS: Record<string, React.ComponentType<{ size?: number; class
 };
 
 const PARTNERSHIP_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  Wallet, ShieldOff, Building2,
+  Wallet, ShieldCheck, Building2,
 };
 
 const SOLUTION_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -51,7 +51,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-sm leading-relaxed text-[#3f4945] mb-6 max-w-md">
-              BizLink Africa Limited helps startups, SMEs, service providers, and online businesses automate sales, customer care, social commerce, and payment integration support through trusted payment partners.
+              BizLink Africa Limited helps startups, SMEs, service providers, and online businesses automate sales, customer care, social commerce, and merchant payment integration and settlement through approved payment infrastructure partners.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -61,8 +61,8 @@ export default function HomePage() {
             {/* Trust indicators row */}
             <div className="flex flex-wrap gap-4 pt-4 border-t border-[#bfc9c4]">
               {[
-                { icon: CheckCircle, label: 'No fund handling' },
-                { icon: Shield, label: 'Approved payment partner' },
+                { icon: CheckCircle, label: 'Controlled merchant settlement' },
+                { icon: Shield, label: 'Approved payment infrastructure' },
                 { icon: BadgeCheck, label: 'Offline onboarding' },
               ].map(({ icon: Icon, label }) => (
                 <div key={label} className="flex items-center gap-1.5">
@@ -222,7 +222,7 @@ export default function HomePage() {
           <SectionHeading
             badge="Our Model"
             title="We Build the Bridge, You Maintain Control"
-            subtitle="BizLink Africa Limited provides ICT infrastructure and integration support. Your funds always go directly to your approved payment partner."
+            subtitle="BizLink Africa coordinates merchant onboarding and payment-technology integration, and manages transaction reconciliation and settlement through approved payment infrastructure partners."
             center
             light
           />
