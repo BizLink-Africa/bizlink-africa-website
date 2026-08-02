@@ -3,15 +3,16 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { checkPayoutStatus } from '@/lib/payouts/status-check-service';
 import { isEligibleForScheduledPoll } from '@/lib/payouts/selcom-status-mapping';
 
-// Scheduled Selcom status polling — see vercel.json's `crons` entry for
-// this route. Protected by CRON_SECRET (Vercel's documented convention:
-// automatically attached as `Authorization: Bearer <CRON_SECRET>` on
-// cron-triggered requests — see
-// https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs).
-// Never reachable by an unauthenticated caller, and never creates a new
-// disbursement — this route only ever calls the read-only Transaction
-// Query endpoint via the same central status-check-service.ts the manual
-// "Check Status" action uses.
+// Scheduled Selcom status polling, triggered every 5 minutes by a GitHub
+// Actions scheduled workflow (see .github/workflows/selcom-status-check-cron.yml)
+// rather than Vercel's native Cron Jobs — a 5-minute schedule exceeds what
+// the Hobby plan's cron feature allows, and this route's auth (a bearer
+// token compared against CRON_SECRET) isn't Vercel-specific, so any caller
+// that knows the secret works identically. Never reachable by an
+// unauthenticated caller, and never creates a new disbursement — this
+// route only ever calls the read-only Transaction Query endpoint via the
+// same central status-check-service.ts the manual "Check Status" action
+// uses.
 export const dynamic = 'force-dynamic';
 
 const BATCH_LIMIT = 50;

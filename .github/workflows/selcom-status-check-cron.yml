@@ -1,0 +1,33 @@
+name: Selcom payout status-check cron
+
+# Replaces Vercel's native Cron Jobs for this route — a 5-minute schedule
+# exceeds what the Hobby plan allows, and this route's auth (a bearer
+# token checked against CRON_SECRET, see src/app/api/payouts/status-check-cron/route.ts)
+# isn't Vercel-specific, so any authorized caller works identically.
+#
+# Requires a repository secret named CRON_SECRET, set to the exact same
+# value as the CRON_SECRET environment variable configured in Vercel's
+# production environment (Project Settings → Environment Variables).
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  status-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call status-check-cron route
+        run: |
+          http_status=$(curl -s -o /dev/null -w '%{http_code}' \
+            --max-time 25 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://admin.bizlinkafrica.net/api/payouts/status-check-cron)
+          echo "Response status: $http_status"
+          if [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "status-check-cron call failed with HTTP $http_status"
+            exit 1
+          fi
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

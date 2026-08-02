@@ -1,0 +1,6 @@
+# Normalize all text files to LF in both the repository and the working
+# tree, regardless of a contributor's local core.autocrlf setting. Without
+# this, Windows checkouts can silently convert LF to CRLF, which breaks
+# tests that do exact substring matching against migration/source file
+# content (e.g. supabase/migrations/*.migration.test.ts).
+* text=auto eol=lf
