@@ -131,7 +131,6 @@ export async function POST(request: Request) {
       merchant_business_registration_status: isMerchantApplication ? data.merchantBusinessRegistrationStatus || null : null,
       merchant_business_type: isMerchantApplication ? data.merchantBusinessType || null : null,
       merchant_monthly_volume_range: isMerchantApplication ? data.merchantMonthlyVolumeRange || null : null,
-      merchant_settlement_destination: isMerchantApplication ? data.merchantSettlementDestination || null : null,
       merchant_current_collection_method: isMerchantApplication ? data.merchantCurrentCollectionMethod || null : null,
       merchant_business_locations_count: isMerchantApplication ? data.merchantBusinessLocationsCount ?? null : null,
       merchant_golive_timeline: isMerchantApplication ? data.merchantGoLiveTimeline || null : null,

@@ -139,7 +139,6 @@ const baseMerchantInquiry = {
   merchantBusinessRegistrationStatus: 'registered',
   merchantBusinessType: 'retail',
   merchantMonthlyVolumeRange: '5m_20m',
-  merchantSettlementDestination: 'mobile_wallet',
   merchantCurrentCollectionMethod: 'mobile_money_manual',
   merchantBusinessLocationsCount: 2,
   merchantGoLiveTimeline: 'within_1_month',
@@ -164,7 +163,6 @@ describe('POST /api/inquiries — saves inquiries correctly', () => {
       merchant_accuracy_confirmed: false,
       merchant_business_registration_status: null,
       merchant_business_type: null,
-      merchant_settlement_destination: null,
       merchant_business_locations_count: null,
     });
   });
@@ -184,7 +182,6 @@ describe('POST /api/inquiries — saves inquiries correctly', () => {
       merchant_business_registration_status: 'registered',
       merchant_business_type: 'retail',
       merchant_monthly_volume_range: '5m_20m',
-      merchant_settlement_destination: 'mobile_wallet',
       merchant_current_collection_method: 'mobile_money_manual',
       merchant_business_locations_count: 2,
       merchant_golive_timeline: 'within_1_month',

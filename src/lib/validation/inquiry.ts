@@ -6,7 +6,6 @@ import {
   MERCHANT_BUSINESS_REGISTRATION_STATUSES,
   MERCHANT_BUSINESS_TYPES,
   MERCHANT_MONTHLY_VOLUME_RANGES,
-  MERCHANT_SETTLEMENT_DESTINATIONS,
   MERCHANT_COLLECTION_METHODS,
   MERCHANT_GOLIVE_TIMELINES,
 } from '@/data/inquiries';
@@ -18,7 +17,6 @@ const contactMethodValues = PREFERRED_CONTACT_METHODS.map((m) => m.value) as [st
 const registrationStatusValues = MERCHANT_BUSINESS_REGISTRATION_STATUSES.map((o) => o.value) as [string, ...string[]];
 const businessTypeValues = MERCHANT_BUSINESS_TYPES.map((o) => o.value) as [string, ...string[]];
 const volumeRangeValues = MERCHANT_MONTHLY_VOLUME_RANGES.map((o) => o.value) as [string, ...string[]];
-const settlementDestinationValues = MERCHANT_SETTLEMENT_DESTINATIONS.map((o) => o.value) as [string, ...string[]];
 const collectionMethodValues = MERCHANT_COLLECTION_METHODS.map((o) => o.value) as [string, ...string[]];
 const goLiveTimelineValues = MERCHANT_GOLIVE_TIMELINES.map((o) => o.value) as [string, ...string[]];
 
@@ -54,7 +52,6 @@ export const inquirySchema = z
     merchantBusinessRegistrationStatus: z.union([z.enum(registrationStatusValues), z.literal('')]).optional(),
     merchantBusinessType: z.union([z.enum(businessTypeValues), z.literal('')]).optional(),
     merchantMonthlyVolumeRange: z.union([z.enum(volumeRangeValues), z.literal('')]).optional(),
-    merchantSettlementDestination: z.union([z.enum(settlementDestinationValues), z.literal('')]).optional(),
     merchantCurrentCollectionMethod: z.union([z.enum(collectionMethodValues), z.literal('')]).optional(),
     merchantBusinessLocationsCount: z.coerce
       .number()
@@ -79,7 +76,6 @@ export const inquirySchema = z
     requireChoice(data.merchantBusinessRegistrationStatus, 'merchantBusinessRegistrationStatus', 'Please select your business registration status.');
     requireChoice(data.merchantBusinessType, 'merchantBusinessType', 'Please select your business type.');
     requireChoice(data.merchantMonthlyVolumeRange, 'merchantMonthlyVolumeRange', 'Please select your estimated monthly transaction volume.');
-    requireChoice(data.merchantSettlementDestination, 'merchantSettlementDestination', 'Please select your preferred settlement destination.');
     requireChoice(data.merchantCurrentCollectionMethod, 'merchantCurrentCollectionMethod', 'Please select your current payment collection method.');
     requireChoice(data.merchantGoLiveTimeline, 'merchantGoLiveTimeline', 'Please select your expected go-live timeline.');
 
