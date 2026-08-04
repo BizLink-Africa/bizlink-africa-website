@@ -1,9 +1,19 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Crown, Users, Building2, LifeBuoy, Cpu, ShieldCheck, Wallet, Megaphone, ShieldAlert, Landmark, Store, Percent, Banknote, AlertTriangle, FileBarChart, Radar } from 'lucide-react';
+import { LayoutDashboard, Crown, Users, Building2, LifeBuoy, Cpu, ShieldCheck, Wallet, Megaphone, ShieldAlert, Landmark, Store, Layers } from 'lucide-react';
 
 // Sidebar structure. Contains ONLY routes that exist today — modules not yet
 // built are omitted entirely rather than shown as disabled/placeholder
 // links, per explicit instruction. Add items here once each module ships.
+//
+// BizLink Africa does not receive, hold, reconcile, disburse or settle
+// merchant funds — merchants settle directly with their approved payment
+// partner. The former Commission & Fee Rules, Settlement & Payouts,
+// Financial Reports, and Risk & Compliance groups (and the Disbursement API
+// integration settings) modeled BizLink as that settling party and have been
+// removed from active navigation. Their pages and data still exist,
+// preserved read-only for audit history behind the "Archived Financial
+// Prototype" flag, restricted to Super Admin — see
+// src/lib/archived-financial-prototype.ts. Nothing was deleted.
 export interface NavLeaf {
   label: string;
   href: string;
@@ -60,9 +70,45 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Solutions & Services', href: '/admin/services', permission: 'services.view' },
       { label: 'Proposals', href: '/admin/crm/proposals', permission: 'proposals.view' },
       { label: 'Sales Pipeline', href: '/admin/crm/pipeline', permission: 'dashboard.crm.view' },
-      { label: 'Follow-ups', href: '/admin/crm/follow-ups', permission: 'crm.followups.view' },
+      { label: 'Follow-Ups', href: '/admin/crm/follow-ups', permission: 'crm.followups.view' },
       { label: 'Client Contacts', href: '/admin/crm/contacts', permission: 'clients.view' },
       { label: 'CRM Reports', href: '/admin/crm/reports', permission: 'crm.reports.view' },
+    ],
+  },
+  {
+    label: 'Merchant Operations',
+    icon: Store,
+    items: [
+      { label: 'Merchant Applications', href: '/admin/merchant-operations/applications', permission: 'merchants.view' },
+      { label: 'Merchant Profiles', href: '/admin/merchant-operations/profiles', permission: 'merchants.view' },
+      { label: 'KYC Coordination', href: '/admin/merchant-operations/kyc', permission: 'merchant_kyc.view' },
+      { label: 'Merchant Accounts/Tills', href: '/admin/merchant-operations/tills', permission: 'merchant_tills.view' },
+      { label: 'Integration Status', href: '/admin/integration-health/transactions', permission: 'integrations.view' },
+      // "Settlement Beneficiaries" removed — archived financial prototype
+      // (Super Admin only), see
+      // src/app/admin/(protected)/merchant-operations/beneficiaries/layout.tsx.
+      // Merchants now supply and maintain their own settlement instructions
+      // directly with the approved payment partner.
+      // "Merchant Agreements" was requested but has no backing page yet —
+      // omitted rather than shown as a dead link, per this file's own
+      // no-placeholder rule above.
+    ],
+  },
+  {
+    // "Client Services", "Social Commerce", "E-Commerce" and "System & API
+    // Integration" were requested but have no backing page today — omitted
+    // rather than stubbed. "Payment Integration Support" now links to the
+    // provider-neutral Payment Integration Health page (see
+    // src/app/admin/(protected)/settings/integrations/payment-infrastructure/page.tsx)
+    // — this replaces the retired Selcom Disbursement API settings page,
+    // which is now Super Admin only / archived (see Administration group
+    // note below).
+    label: 'Services',
+    icon: Layers,
+    items: [
+      { label: 'Service Catalogue', href: '/admin/services', permission: 'services.view' },
+      { label: 'AI Agents', href: '/admin/ai-agents', permission: 'ai_agents.view' },
+      { label: 'Payment Integration Support', href: '/admin/settings/integrations/payment-infrastructure', permission: 'integrations.view' },
     ],
   },
   {
@@ -70,7 +116,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Building2,
     items: [
       { label: 'Operations Dashboard', href: '/admin/operations', permission: 'dashboard.operations.view' },
-      { label: 'Client Onboarding', href: '/admin/onboarding', permission: 'onboarding.view' },
+      { label: 'Onboarding', href: '/admin/onboarding', permission: 'onboarding.view' },
       { label: 'Contracts', href: '/admin/contracts', permission: 'contracts.view', badgeKey: 'pendingContracts' },
       { label: 'Service Delivery', href: '/admin/service-delivery', permission: 'services.view' },
       { label: 'Projects', href: '/admin/operations/projects', permission: 'projects.view' },
@@ -78,7 +124,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Operational Tasks', href: '/admin/operations/tasks', permission: 'operations.tasks.view' },
       { label: 'Resource Allocation', href: '/admin/operations/resources', permission: 'resources.view' },
       { label: 'Delivery Milestones', href: '/admin/operations/milestones', permission: 'projects.view' },
-      { label: 'Operations Reports', href: '/admin/operations/reports', permission: 'operations.reports.view' },
+      { label: 'Support Tickets', href: '/admin/support-tickets', permission: 'tickets.view', badgeKey: 'criticalTickets' },
+      { label: 'Integration Health', href: '/admin/integration-health', permission: 'integrations.view', badgeKey: 'failedIntegrations' },
+      { label: 'Notifications', href: '/admin/notifications', permission: 'notifications.view', badgeKey: 'failedNotifications' },
+      { label: 'Reports', href: '/admin/operations/reports', permission: 'operations.reports.view' },
     ],
   },
   {
@@ -140,16 +189,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'CTO Dashboard', href: '/admin/cto', permission: 'dashboard.technical.view' },
       { label: 'Integration Health', href: '/admin/integration-health', permission: 'integrations.view', badgeKey: 'failedIntegrations' },
       { label: 'AI Agents', href: '/admin/ai-agents', permission: 'ai_agents.view' },
-      { label: 'API Monitoring', href: '/admin/api-monitoring', permission: 'api_logs.view' },
-      { label: 'Webhook Monitoring', href: '/admin/webhook-monitoring', permission: 'webhooks.view', badgeKey: 'failedWebhooks' },
+      { label: 'API Integrations', href: '/admin/api-monitoring', permission: 'api_logs.view' },
+      { label: 'Webhooks', href: '/admin/webhook-monitoring', permission: 'webhooks.view', badgeKey: 'failedWebhooks' },
       { label: 'Deployment Management', href: '/admin/deployments', permission: 'deployments.view' },
       { label: 'Background Jobs', href: '/admin/background-jobs', permission: 'jobs.view', badgeKey: 'failedJobs' },
       { label: 'Technical Incidents', href: '/admin/technical-incidents', permission: 'incidents.view', badgeKey: 'activeIncidents' },
       { label: 'System Health', href: '/admin/system-health', permission: 'system.health.view' },
       { label: 'Database Health', href: '/admin/database-health', permission: 'database.health.view' },
       { label: 'Backup Monitoring', href: '/admin/backup-monitoring', permission: 'backups.view' },
+      { label: 'Security Hub', href: '/admin/security', permission: 'dashboard.security.view' },
       { label: 'Technical Reports', href: '/admin/technology/reports', permission: 'technology.reports.view' },
       { label: 'Technology Settings', href: '/admin/technology/settings', permission: 'technology.settings.view' },
+      // "System Logs" and "Diagnostics" were requested but have no backing
+      // page yet — omitted, not stubbed.
     ],
   },
   {
@@ -177,7 +229,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Governance',
     icon: Landmark,
     items: [
-      { label: 'Governance Dashboard', href: '/admin/governance', permission: 'dashboard.governance.view' },
+      { label: 'Business Overview', href: '/admin/governance', permission: 'dashboard.governance.view' },
       { label: 'Roles & Permissions', href: '/admin/governance/roles', permission: 'roles.view' },
       { label: 'Policies', href: '/admin/governance/policies', permission: 'policies.view' },
       { label: 'Departments', href: '/admin/governance/departments', permission: 'departments.view' },
@@ -187,130 +239,24 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Reports & Analytics', href: '/admin/governance/analytics', permission: 'governance.analytics.view' },
       { label: 'Audit Summary', href: '/admin/governance/audit-summary', permission: 'governance.audit.view' },
       { label: 'Governance Reports', href: '/admin/governance/reports', permission: 'governance.reports.view' },
+      { label: 'Compliance Records', href: '/admin/compliance', permission: 'dashboard.compliance.view' },
     ],
   },
-  {
-    label: 'Merchant Operations',
-    icon: Store,
-    items: [
-      { label: 'Merchant Applications', href: '/admin/merchant-operations/applications', permission: 'merchants.view' },
-      { label: 'Merchant Profiles', href: '/admin/merchant-operations/profiles', permission: 'merchants.view' },
-      { label: 'KYC Coordination', href: '/admin/merchant-operations/kyc', permission: 'merchant_kyc.view' },
-      { label: 'Merchant Tills', href: '/admin/merchant-operations/tills', permission: 'merchant_tills.view' },
-      { label: 'Settlement Beneficiaries', href: '/admin/merchant-operations/beneficiaries', permission: 'merchant_beneficiaries.view' },
-      // "Merchant Agreements" and "Merchant Status & Holds" were requested
-      // for this group but have no backing page yet — omitted rather than
-      // shown as a dead link, per this file's own no-placeholder rule above.
-    ],
-  },
-  {
-    // Super Admin / authorised Finance only — see the migration's
-    // grants (only super_admin and cfo hold commission_rules.*).
-    // "New Rule" and "Scheduled Rules" still exist as routes (reachable via
-    // buttons on the Commission Rules list page) but are no longer
-    // sidebar entries, matching the requested 4-item structure below.
-    label: 'Commission & Fee Rules',
-    icon: Percent,
-    items: [
-      { label: 'Commission Rules', href: '/admin/commission-rules', permission: 'commission_rules.view' },
-      { label: 'Rate Approvals', href: '/admin/commission-rules/pending', permission: 'commission_rules.approve' },
-      { label: 'Rate History', href: '/admin/commission-rules/history', permission: 'commission_rules.view' },
-      { label: 'Calculation Preview', href: '/admin/commission-rules/preview', permission: 'commission_rules.view' },
-      // "Merchant Rates" and "Fee Tiers" were requested as distinct pages
-      // but have no backing page yet — omitted, not stubbed.
-    ],
-  },
-  {
-    // No live payout execution — see src/lib/settlement/payout-adapter.ts
-    // and src/lib/payouts/disbursement-adapter.ts (sandbox only).
-    // Collection Ledger and Daily Reconciliation moved here from Merchant
-    // Operations; Merchant Payouts moved here from its own former
-    // top-level group (removed); Payout Approvals/Failed Payouts reuse the
-    // existing payouts list page's own status filter rather than being new
-    // pages; Settlement Holds reuses the existing hold queue page (also
-    // linked from Risk & Compliance below as "Compliance Holds" — same
-    // route, two labelled entry points for two audiences).
-    label: 'Settlement & Payouts',
-    icon: Banknote,
-    items: [
-      { label: 'Collection Ledger', href: '/admin/merchant-operations/collections', permission: 'collections.view' },
-      { label: 'Daily Reconciliation', href: '/admin/merchant-operations/reconciliation', permission: 'collections.view' },
-      { label: 'Settlement Batches', href: '/admin/settlement', permission: 'settlement.view' },
-      { label: 'Disbursement Balance', href: '/admin/settlement/balance', permission: 'disbursement_balance.view' },
-      { label: 'Payout Approvals', href: '/admin/payouts?status=pending_approval', permission: 'payouts.view' },
-      { label: 'Merchant Payouts', href: '/admin/payouts', permission: 'payouts.view' },
-      { label: 'Failed Payouts', href: '/admin/payouts?status=failed', permission: 'payouts.view' },
-      { label: 'Settlement Holds', href: '/admin/chargebacks/holds', permission: 'holds.view' },
-      // "Settlement Calendar" was requested but has no backing page yet —
-      // omitted, not stubbed.
-    ],
-  },
-  {
-    // "Open Case", "Place Hold", "Merchant Exposure" and "Chargeback
-    // Reporting" still exist as routes (reachable from within case/hold
-    // detail pages, or directly) but are no longer sidebar entries, per
-    // the requested 2-item structure below. Hold Queue moved to
-    // Settlement & Payouts / Risk & Compliance (see above/below).
-    label: 'Chargebacks & Holds',
-    icon: AlertTriangle,
-    items: [
-      { label: 'Chargeback Cases', href: '/admin/chargebacks', permission: 'chargebacks.view' },
-      { label: 'Reversals', href: '/admin/chargebacks/reversals', permission: 'reversals.view' },
-      // "Refund Requests", "Evidence Tracking" and "Recovery Adjustments"
-      // were requested but have no standalone page yet (evidence/recovery
-      // are recorded from within a case's detail page today) — omitted.
-    ],
-  },
-  {
-    // Super Admin / authorised Finance only — see the migration's grant
-    // (only super_admin and cfo hold financial_reports.view). Merchant
-    // self-service statements live separately at /merchant/statement.
-    // "All Reports", "Settlement Holds" (moved above), "Beneficiary
-    // Changes" (moved to Risk & Compliance below) and "Merchant KYC
-    // Status" are no longer sidebar entries here, per the requested
-    // 9-item structure below — all remain reachable at their existing URLs.
-    label: 'Financial Reports',
-    icon: FileBarChart,
-    items: [
-      { label: 'Daily Collection Report', href: '/admin/financial-reports/daily-collections', permission: 'financial_reports.view' },
-      { label: 'Reconciliation Report', href: '/admin/financial-reports/daily-reconciliation', permission: 'financial_reports.view' },
-      { label: 'Merchant Settlement Report', href: '/admin/financial-reports/merchant-settlement', permission: 'financial_reports.view' },
-      { label: 'Commission Report', href: '/admin/financial-reports/commission-revenue', permission: 'financial_reports.view' },
-      { label: 'Outstanding Merchant Liabilities', href: '/admin/financial-reports/outstanding-liabilities', permission: 'financial_reports.view' },
-      { label: 'Failed Payout Report', href: '/admin/financial-reports/failed-payouts', permission: 'financial_reports.view' },
-      { label: 'Chargeback Report', href: '/admin/financial-reports/chargebacks-reversals', permission: 'financial_reports.view' },
-      { label: 'Merchant Statements', href: '/admin/financial-reports/statements', permission: 'financial_reports.view' },
-      { label: 'Financial Audit Logs', href: '/admin/financial-reports/audit-trail', permission: 'financial_reports.view' },
-    ],
-  },
-  {
-    // New group. Only 3 of the 7 requested children have a backing page
-    // today; the rest (KYC Exceptions, Suspicious Activity Reviews,
-    // Merchant Risk Ratings, Transaction Monitoring) have no underlying
-    // data model yet and are deliberately omitted rather than stubbed.
-    // Compliance Holds reuses the same route as Settlement & Payouts'
-    // "Settlement Holds" above; Audit Reviews reuses the existing Access
-    // Reviews page also linked from Compliance & Security / Governance.
-    label: 'Risk & Compliance',
-    icon: Radar,
-    items: [
-      { label: 'Beneficiary Changes', href: '/admin/financial-reports/beneficiary-changes', permission: 'financial_reports.view' },
-      { label: 'Compliance Holds', href: '/admin/chargebacks/holds', permission: 'holds.view' },
-      { label: 'Audit Reviews', href: '/admin/compliance/access-reviews', permission: 'access_reviews.view' },
-    ],
-  },
+  // "Chargebacks & Holds" group removed — the entire chargebacks module
+  // (cases, evidence, resolution, recovery, holds, reversals) is now an
+  // archived financial prototype, Super Admin only. Opening a new case
+  // fundamentally depends on collection_transactions, BizLink's own record
+  // of merchant collections, which is itself archived. See
+  // src/app/admin/(protected)/chargebacks/layout.tsx and
+  // src/lib/archived-financial-prototype.ts. Not linked from active
+  // navigation or production operations; nothing was deleted.
   {
     label: 'Administration',
     icon: ShieldCheck,
     items: [
       { label: 'Staff & Roles', href: '/admin/staff', permission: 'users.view' },
       { label: 'Audit Logs', href: '/admin/audit-logs', permission: 'audit.view' },
-      // Administration -> Integrations -> Disbursement API. Nav items here
-      // are a flat list (no 3-level tree in this sidebar), so the
-      // "Integrations" grouping is expressed via the label + the page's
-      // own on-page breadcrumb rather than a nested nav structure.
-      { label: 'Integrations: Disbursement API', href: '/admin/settings/integrations/selcom', permission: 'integrations.selcom.view' },
-      { label: 'Disbursement API: Production Readiness', href: '/admin/settings/integrations/selcom/production-readiness', permission: 'selcom_production.view' },
+      { label: 'Access Control', href: '/admin/governance/roles', permission: 'roles.view' },
       { label: 'Notifications', href: '/admin/notifications', permission: 'notifications.view', badgeKey: 'failedNotifications' },
       { label: 'Company Settings', href: '/admin/settings/company', permission: 'company.settings.view' },
       { label: 'Finance Settings', href: '/admin/finance/settings', permission: 'finance.settings.view' },
@@ -324,6 +270,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Notification Settings', href: '/admin/settings/notification-settings', permission: 'notification.settings.view' },
       { label: 'System Settings', href: '/admin/settings/system', permission: 'system.settings.view' },
       { label: 'Profile', href: '/admin/settings/profile', permission: null },
+      // "Integrations: Disbursement API" and "Disbursement API: Production
+      // Readiness" removed — archived financial prototype, Super Admin only,
+      // see src/lib/archived-financial-prototype.ts. Not linked from active
+      // navigation or production operations.
     ],
   },
 ];

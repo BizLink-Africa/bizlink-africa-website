@@ -8,6 +8,7 @@ import { isValidMoneyString } from '@/lib/collections/money';
 import { calculateCommission, type CommissionRuleInput, type CommissionTier } from '@/lib/commission/calculate';
 import { resolveApplicableCommissionRule } from '@/lib/commission/resolve';
 import type { CommissionFeeRule, CommissionType } from '@/data/commission';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -56,6 +57,11 @@ export interface NewRuleInput {
 // the migration), so even a bypassed client could never insert an
 // already-approved row here.
 export async function createCommissionFeeRule(input: NewRuleInput): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('commission_rules.manage');
@@ -175,6 +181,11 @@ export async function createCommissionFeeRule(input: NewRuleInput): Promise<Acti
 }
 
 export async function submitCommissionFeeRule(ruleId: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('commission_rules.manage');
@@ -203,6 +214,11 @@ export async function submitCommissionFeeRule(ruleId: string): Promise<ActionRes
 }
 
 export async function approveCommissionFeeRule(ruleId: string, approvalNotes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('commission_rules.approve');
@@ -236,6 +252,11 @@ export async function approveCommissionFeeRule(ruleId: string, approvalNotes: st
 }
 
 export async function rejectCommissionFeeRule(ruleId: string, reviewNotes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('commission_rules.approve');
@@ -272,6 +293,11 @@ export async function rejectCommissionFeeRule(ruleId: string, reviewNotes: strin
 }
 
 export async function expireCommissionFeeRule(ruleId: string, expiryDate: string, expiryReason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('commission_rules.approve');

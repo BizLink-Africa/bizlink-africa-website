@@ -18,7 +18,7 @@ const SOLUTION_IMAGES: Record<string, string> = {
 
 export const metadata: Metadata = {
   title: 'Our Solutions',
-  description: 'Explore BizLink Africa Limited solutions: AI agents, social commerce automation, merchant payment integration and settlement services, workflow automation, and ICT consulting.',
+  description: 'Explore BizLink Africa Limited solutions: AI agents, social commerce automation, payment integration support, workflow automation, and ICT consulting.',
 };
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

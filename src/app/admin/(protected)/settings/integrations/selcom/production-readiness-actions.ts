@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 import { hasRecentReauth, SELCOM_INTEGRATION_REAUTH_PURPOSE } from '@/lib/supabase/reauth';
 import { PRODUCTION_READINESS_ITEM_KEYS, type ChecklistItemStatus } from '@/lib/selcom/production-readiness-items';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 const PAGE_PATH = '/admin/settings/integrations/selcom/production-readiness';
 
@@ -30,6 +31,11 @@ interface ActionResult {
 // Never itself claims a test passed — it only records what a human with
 // selcom_production.manage_checklist attests to.
 export async function setProductionReadinessCheck(itemKey: string, status: ChecklistItemStatus, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('selcom_production.manage_checklist');
@@ -105,10 +111,20 @@ async function recordApproval(
 }
 
 export async function recordFinanceApproval(approved: boolean, reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   return recordApproval('finance', approved, reason);
 }
 
 export async function recordComplianceApproval(approved: boolean, reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   return recordApproval('compliance', approved, reason);
 }
 
@@ -117,6 +133,11 @@ export async function recordComplianceApproval(approved: boolean, reason: string
 // both approvals server-side (never trusts this action's own view of that
 // state). Does NOT make production live: see config.ts's header comment.
 export async function authorizeProductionActivation(reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('selcom_production.authorize');
@@ -157,6 +178,11 @@ export async function authorizeProductionActivation(reason: string): Promise<Act
 }
 
 export async function deauthorizeProductionActivation(reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('selcom_production.authorize');

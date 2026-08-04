@@ -7,7 +7,7 @@ import { PARTNERSHIP_FEATURES } from '@/data/website';
 
 export const metadata: Metadata = {
   title: 'Partnership Approach',
-  description: 'Learn how BizLink Africa coordinates merchant onboarding, payment-technology integration, and settlement management through approved payment infrastructure partners.',
+  description: 'Learn how BizLink Africa coordinates merchant onboarding and payment-technology integration through approved payment partners, with direct merchant settlement and no BizLink custody of funds.',
 };
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -28,7 +28,7 @@ const HOW_IT_WORKS = [
   {
     step: '03',
     title: 'BizLink Builds the Bridge',
-    desc: 'We integrate your platform with approved payment infrastructure, automate your workflows, and manage ongoing reconciliation, settlement and technical support.',
+    desc: 'We integrate your platform with approved payment infrastructure, automate your workflows, and provide ongoing technical and operational support. Settlement happens directly between you and your payment partner.',
   },
 ];
 
@@ -51,7 +51,7 @@ export default function PartnershipPage() {
               We Build the Bridge, You Maintain Control
             </h1>
             <p className="text-lg leading-relaxed text-[#c4c7c7] max-w-2xl">
-              BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners.
+              BizLink Africa provides ICT infrastructure, automation systems and payment-integration support through approved payment partners. Each merchant maintains their own payment account or wallet and manages settlement directly with the applicable payment partner.
             </p>
           </div>
         </div>
@@ -120,17 +120,17 @@ export default function PartnershipPage() {
             <div>
               <SectionHeading
                 badge="Trust Assurances"
-                title="Controlled Merchant Settlement"
-                subtitle="BizLink Africa reconciles eligible merchant collections and facilitates settlement to verified merchant bank accounts or mobile wallets according to agreed merchant terms, settlement schedules and compliance requirements."
+                title="Direct Merchant Settlement"
+                subtitle="Each merchant maintains their own payment account or wallet and receives settlement directly from the approved payment partner. BizLink Africa does not receive, hold, control or settle merchant funds."
               />
               <div className="mt-8 flex flex-col gap-4">
                 {[
-                  'Merchant payments are processed through approved payment infrastructure partners.',
-                  'Final KYC and merchant verification are subject to partner approval.',
-                  'BizLink Africa reconciles every transaction before settlement.',
-                  'Settlement is made to verified merchant bank accounts or mobile wallets.',
-                  'Commercial arrangements with payment infrastructure partners remain confidential.',
-                  'All operations follow audit-ready processes.',
+                  'Merchant-owned payment account.',
+                  'Direct settlement to each merchant.',
+                  'Provider-neutral integration support.',
+                  'No BizLink custody of client funds.',
+                  'Secure offline onboarding.',
+                  'Technical and operational support.',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <CheckCircle size={17} className="text-[#00342b] mt-0.5 shrink-0" />
@@ -149,7 +149,7 @@ export default function PartnershipPage() {
                 {[
                   { icon: Wallet, title: 'Merchant Till & Account', desc: 'Created and activated by the approved payment infrastructure partner, subject to their KYC requirements.' },
                   { icon: Shield, title: 'Approved Infrastructure', desc: 'Connected to regulated, approved payment infrastructure partners.' },
-                  { icon: Building2, title: "BizLink's Role", desc: 'We coordinate onboarding, integrate payment technology, and manage reconciliation and settlement on your behalf.' },
+                  { icon: Building2, title: "BizLink's Role", desc: 'We coordinate onboarding and integrate payment technology. Settlement happens directly between you and your payment partner — BizLink never holds or manages your funds.' },
                 ].map(({ icon: Icon, title, desc }) => (
                   <div key={title} className="flex items-start gap-4 border-b border-white/10 pb-5 last:border-0 last:pb-0">
                     <div className="w-9 h-9 bg-[#afefdd]/20 flex items-center justify-center shrink-0">

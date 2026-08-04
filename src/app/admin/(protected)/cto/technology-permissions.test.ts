@@ -30,6 +30,7 @@ describe('Technology — sidebar permission matches page enforcement', () => {
     '/admin/backup-monitoring': '../backup-monitoring/page.tsx',
     '/admin/technology/reports': '../technology/reports/page.tsx',
     '/admin/technology/settings': '../technology/settings/page.tsx',
+    '/admin/security': '../security/page.tsx',
   };
 
   it('covers every Technology nav item (no route was added to the sidebar without an entry here)', () => {

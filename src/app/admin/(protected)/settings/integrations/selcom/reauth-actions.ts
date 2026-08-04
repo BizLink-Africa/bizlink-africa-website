@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { verifyAdminSession } from '@/lib/supabase/dal';
 import { SELCOM_INTEGRATION_REAUTH_PURPOSE, REAUTH_TTL_MINUTES } from '@/lib/supabase/reauth';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 // Step-up re-authentication for the two consequential actions on this page
 // (enabling/disabling the integration, requesting production activation) —
@@ -10,6 +11,11 @@ import { SELCOM_INTEGRATION_REAUTH_PURPOSE, REAUTH_TTL_MINUTES } from '@/lib/sup
 // signInWithPassword() below IS the real re-authentication event; the row
 // inserted afterward is just a short-lived marker that it happened.
 export async function reauthenticateForSelcomIntegration(password: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   const user = await verifyAdminSession();
   if (!user.email) {
     return { success: false, message: 'Unable to verify your account email.' };

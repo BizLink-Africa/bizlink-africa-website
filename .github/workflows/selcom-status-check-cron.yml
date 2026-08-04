@@ -1,17 +1,25 @@
 name: Selcom payout status-check cron
 
-# Replaces Vercel's native Cron Jobs for this route — a 5-minute schedule
-# exceeds what the Hobby plan allows, and this route's auth (a bearer
-# token checked against CRON_SECRET, see src/app/api/payouts/status-check-cron/route.ts)
-# isn't Vercel-specific, so any authorized caller works identically.
+# DISABLED (automatic schedule removed): BizLink Africa does not manage
+# merchant settlement — payout creation/approval/submission is permanently
+# blocked (see src/lib/archived-financial-prototype.ts,
+# BIZLINK_MANAGES_MERCHANT_SETTLEMENTS), so no new payout can ever reach a
+# 'submitted'/'processing'/'unknown' status that would need polling. This
+# workflow, and the underlying route it calls
+# (src/app/api/payouts/status-check-cron/route.ts), are read-only status
+# checks — they never create a disbursement — and are kept reachable via
+# manual dispatch only, for resolving the final status of any payout
+# already in flight from before this change, or for historical/audit
+# reconciliation. Re-enabling the schedule below would resume automatic
+# polling; do not do so without a reason tied to actual in-flight records.
 #
 # Requires a repository secret named CRON_SECRET, set to the exact same
 # value as the CRON_SECRET environment variable configured in Vercel's
 # production environment (Project Settings → Environment Variables).
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # schedule:
+  #   - cron: '*/5 * * * *'
   workflow_dispatch: {}
 
 jobs:

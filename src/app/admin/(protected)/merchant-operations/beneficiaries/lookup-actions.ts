@@ -9,6 +9,7 @@ import { maskCredential } from '@/lib/security/mask';
 import { lookupRecipientAccount } from '@/lib/selcom/account-lookup';
 import { isSelcomError } from '@/lib/selcom/errors';
 import { isValidMoneyString } from '@/lib/collections/money';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 const REAUTH_REQUIRED_MESSAGE = 'Please re-authenticate to continue — this action requires a recent password confirmation.';
 
@@ -39,6 +40,11 @@ export interface AccountLookupResult {
 // maskCredential() for storage, and is never itself written to a table,
 // a log line, or this action's own return value.
 export async function lookupBeneficiaryAccount(input: AccountLookupInput): Promise<AccountLookupResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('merchant_beneficiaries.manage');
@@ -146,6 +152,11 @@ export async function confirmLookupNameMatch(
   notes: string,
   merchantId: string
 ): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   try {
     await requirePermission('merchant_beneficiaries.manage');
   } catch {

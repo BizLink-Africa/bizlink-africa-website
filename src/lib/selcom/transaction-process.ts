@@ -4,6 +4,7 @@ import { getSelcomConfig } from './config';
 import { isSelcomIntegrationEnabledByEnv, isSelcomLivePayoutsEnabledByEnv } from './env';
 import { isValidMoneyString } from '@/lib/collections/money';
 import { SelcomConfigError, SelcomValidationError } from './errors';
+import { MERCHANT_PAYOUTS_NOT_HANDLED_MESSAGE, isBizlinkManagingMerchantSettlements } from '@/lib/archived-financial-prototype';
 import type { OrderedFields, SelcomApiResult, TransactionProcessData, TransactionProcessRequest } from './types';
 
 // POST /v1/transaction/process — initiates a real disbursement. This is the
@@ -39,6 +40,20 @@ export async function initiateDisbursement(
   request: TransactionProcessRequest,
   correlationId?: string
 ): Promise<SelcomApiResult<TransactionProcessData>> {
+  // The most fundamental gate, checked first, ahead of even the two
+  // deployment-level env flags below: BizLink Africa does not manage
+  // merchant settlement (see BIZLINK_MANAGES_MERCHANT_SETTLEMENTS in
+  // src/lib/archived-financial-prototype.ts). This function is the one call
+  // in the whole codebase that actually moves money — every caller is
+  // already blocked further up the stack, but this exists so that remains
+  // true even for a future or direct caller that bypasses those layers.
+  // isBizlinkManagingMerchantSettlements() defaults to false and must stay
+  // false — see that function's doc comment for why this never becomes a
+  // bypassable toggle.
+  if (!isBizlinkManagingMerchantSettlements()) {
+    throw new SelcomConfigError(MERCHANT_PAYOUTS_NOT_HANDLED_MESSAGE, correlationId);
+  }
+
   const config = getSelcomConfig();
 
   if (!isSelcomIntegrationEnabledByEnv()) {

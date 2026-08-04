@@ -25,6 +25,7 @@ describe('Governance — sidebar permission matches page enforcement', () => {
     '/admin/governance/analytics': 'analytics/page.tsx',
     '/admin/governance/audit-summary': 'audit-summary/page.tsx',
     '/admin/governance/reports': 'reports/page.tsx',
+    '/admin/compliance': '../compliance/page.tsx',
   };
 
   it('covers every Governance nav item (no route was added to the sidebar without an entry here)', () => {

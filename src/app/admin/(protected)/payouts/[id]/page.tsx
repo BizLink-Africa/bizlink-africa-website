@@ -8,6 +8,7 @@ import PayoutReauthPrompt from '@/components/admin/payouts/PayoutReauthPrompt';
 import PayoutActions from '@/components/admin/payouts/PayoutActions';
 import SandboxBanner from '@/components/admin/payouts/SandboxBanner';
 import { formatMoney } from '@/lib/collections/money';
+import { isBizlinkManagingMerchantSettlements } from '@/lib/archived-financial-prototype';
 import {
   MERCHANT_PAYOUT_STATUSES,
   MERCHANT_PAYOUT_STATUS_COLORS,
@@ -160,6 +161,7 @@ export default async function MerchantPayoutDetailPage({ params }: { params: Pro
           canApprove={canApprove}
           canSubmit={canSubmit}
           canHold={canHold}
+          settlementsManagedByBizLink={isBizlinkManagingMerchantSettlements()}
         />
       </div>
 

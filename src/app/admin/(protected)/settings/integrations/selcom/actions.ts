@@ -12,6 +12,7 @@ import { getSelcomIntegrationStatus } from '@/lib/selcom/status';
 import { isSelcomError } from '@/lib/selcom/errors';
 import { processSelcomCallback, maskCallbackAccountNumber, getLiveCallbackTestUrl } from '@/lib/selcom/callback';
 import { refreshSelcomBalance } from '@/lib/selcom/balance-service';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 const PAGE_PATH = '/admin/settings/integrations/selcom';
 
@@ -36,6 +37,11 @@ async function assertIntegrationEnabled(supabase: Awaited<ReturnType<typeof crea
 // the same reauth check, same belt-and-suspenders pattern as
 // approvePayout() in src/app/admin/(protected)/payouts/actions.ts.
 export async function setIntegrationEnabled(enabled: boolean): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.manage');
@@ -66,6 +72,11 @@ export async function setIntegrationEnabled(enabled: boolean): Promise<ActionRes
 // Records a REQUEST only — never flips anything live. See config.ts and
 // the migration's comment on request_selcom_production_activation().
 export async function requestProductionActivation(reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.manage');
@@ -107,6 +118,11 @@ export async function requestProductionActivation(reason: string): Promise<Actio
 // for a single logical check (its own internal retry only covers
 // network/timeout/503, not this whole action).
 export async function testSandboxConnection(): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.test');
@@ -151,6 +167,11 @@ export async function testSandboxConnection(): Promise<ActionResult> {
 // what's surfaced: this one is logged as 'balance_check' and returns the
 // actual balance/currency for display, never just a pass/fail.
 export async function checkAccountBalance(): Promise<ActionResult & { balance?: string; currency?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.balance');
@@ -199,6 +220,11 @@ export async function checkAccountBalance(): Promise<ActionResult & { balance?: 
 // network call and says so in its result message, rather than implying it
 // confirmed anything with Selcom itself.
 export async function verifyCallbackConfiguration(): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.test');
@@ -258,6 +284,11 @@ export async function simulateSelcomCallback(
   payoutId: string,
   options: SimulateCallbackOptions
 ): Promise<ActionResult & { outcome?: string; rejectionReason?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('integrations.selcom.test');
@@ -382,6 +413,11 @@ export async function simulateSelcomCallback(
 // returns the raw Selcom response — only the already-masked/typed fields
 // refreshSelcomBalance() produces.
 export async function refreshDisbursementBalance(): Promise<ActionResult & { maskedAccountNumber?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('disbursement_balance.refresh');

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/supabase/dal';
+import { checkArchivedFinancialPrototypeAccess } from '@/lib/archived-financial-prototype';
 import { createClient } from '@/lib/supabase/server';
 import type { MerchantPayout } from '@/data/payouts';
 
@@ -16,6 +17,11 @@ function csvRow(cells: (string | number)[]): string {
 // Settlement confirmation export. Never includes a raw beneficiary
 // destination value — only the already-masked form.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const access = await checkArchivedFinancialPrototypeAccess();
+  if (!access.ok) {
+    return NextResponse.json({ error: 'This module is archived. BizLink Africa does not handle merchant funds or settlements.' }, { status: 403 });
+  }
+
   try {
     await requirePermission('payouts.view');
   } catch {

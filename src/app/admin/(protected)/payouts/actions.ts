@@ -13,6 +13,7 @@ import { isSelcomError } from '@/lib/selcom/errors';
 import { mapSelcomTransactionStatus } from '@/lib/payouts/selcom-status-mapping';
 import { checkPayoutStatus } from '@/lib/payouts/status-check-service';
 import { resolveSelcomEnvironment } from '@/lib/selcom/config';
+import { assertMerchantSettlementsNotBizLinkManaged } from '@/lib/archived-financial-prototype';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -38,6 +39,11 @@ async function assertSelcomIntegrationEnabled(supabase: Awaited<ReturnType<typeo
 }
 
 export async function createPayoutsForBatch(batchId: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.manage');
@@ -86,6 +92,11 @@ export async function createPayoutsForBatch(batchId: string): Promise<ActionResu
 // Approving real money movement requires a fresh re-authentication —
 // checked here, server-side, never trusted from client state.
 export async function approvePayout(payoutId: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.approve');
@@ -116,6 +127,11 @@ export async function approvePayout(payoutId: string): Promise<ActionResult> {
 }
 
 export async function cancelPayout(payoutId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.manage');
@@ -159,6 +175,11 @@ export async function cancelPayout(payoutId: string, reason: string): Promise<Ac
 // disbursement even if a previous attempt's response was lost to a
 // network timeout.
 export async function submitPayout(payoutId: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.submit');
@@ -350,6 +371,11 @@ export async function submitPayout(payoutId: string): Promise<ActionResult> {
 // nothing in this codebase calls submitPayout() on a timer or in response
 // to a failure — only an explicit staff action.
 export async function retryPayout(payoutId: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.manage');
@@ -377,6 +403,11 @@ export async function retryPayout(payoutId: string): Promise<ActionResult> {
 }
 
 export async function placePayoutHold(payoutId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.hold');
@@ -408,6 +439,11 @@ export async function placePayoutHold(payoutId: string, reason: string): Promise
 }
 
 export async function releasePayoutHold(payoutId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.hold');
@@ -436,6 +472,11 @@ export async function releasePayoutHold(payoutId: string, notes: string): Promis
 }
 
 export async function reversePayout(payoutId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('payouts.approve');
@@ -476,6 +517,13 @@ export async function reversePayout(payoutId: string, reason: string): Promise<A
 // both manual and automatic checks. Every manual check is audit-logged,
 // whether or not it changes anything (requirement: audit each manual
 // status query).
+// Read-only technical status check — never moves money, never touches the
+// disbursement pipeline. Deliberately NOT gated by
+// assertMerchantSettlementsNotBizLinkManaged(): transaction-status viewing
+// is explicitly preserved non-financial integration support, distinct from
+// the payout-creation/approval/submission/retry/cancellation/hold/reversal
+// actions above, all of which move or control money and are permanently
+// blocked.
 export async function checkPayoutProviderStatus(payoutId: string): Promise<ActionResult & { providerStatus?: string }> {
   let user;
   try {

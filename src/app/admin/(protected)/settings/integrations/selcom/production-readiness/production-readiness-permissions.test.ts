@@ -6,34 +6,67 @@ import { NAV_GROUPS } from '@/data/navigation';
 
 const ACTIONS_PATH = join(__dirname, '..', 'production-readiness-actions.ts');
 
-describe('Production Readiness — sidebar permission matches page enforcement', () => {
+// "Disbursement API: Production Readiness" modeled the checklist for
+// putting BizLink's own Selcom disbursement account live in production.
+// BizLink Africa does not receive, hold, disburse or settle merchant funds
+// and has no disbursement account to activate for production, so this item
+// was removed from the Administration group in the sidebar — see
+// navigation.ts and src/lib/archived-financial-prototype.ts. Nothing was
+// deleted: page.tsx and production-readiness-actions.ts still independently
+// enforce their original permissions/reauth/reason checks.
+describe('Production Readiness — dissolved sidebar item, route archived and Super-Admin gated', () => {
   const group = NAV_GROUPS.find((g) => g.label === 'Administration');
   if (!group) throw new Error('Administration group not found in navigation.ts');
 
-  const item = group.items.find((i) => i.href === '/admin/settings/integrations/selcom/production-readiness');
-
-  it('Administration includes the Production Readiness item gated by selcom_production.view', () => {
-    expect(item).toBeDefined();
-    expect(item?.permission).toBe('selcom_production.view');
+  it('Administration no longer includes the Production Readiness item (stays caught if someone re-adds it without going through the archival process)', () => {
+    const item = group.items.find((i) => i.href === '/admin/settings/integrations/selcom/production-readiness');
+    expect(item).toBeUndefined();
   });
 
-  it('page.tsx requires selcom_production.view', () => {
+  it('no item in Administration mentions "Production Readiness" at all', () => {
+    const item = group.items.find((i) => i.label.includes('Production Readiness'));
+    expect(item).toBeUndefined();
+  });
+
+  it('page.tsx still requires selcom_production.view, even though it is no longer linked from the sidebar', () => {
     const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
     expect(source).toContain(`requirePermission('selcom_production.view')`);
   });
 
-  it('page.tsx separately checks manage_checklist/approve_finance/approve_compliance/authorize for conditional rendering', () => {
-    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
-    expect(source).toContain("'selcom_production.manage_checklist'");
-    expect(source).toContain("'selcom_production.approve_finance'");
-    expect(source).toContain("'selcom_production.approve_compliance'");
-    expect(source).toContain("'selcom_production.authorize'");
+  it("the shared selcom layout.tsx (parent of production-readiness/) wires up the archived-prototype access gate", () => {
+    const source = readFileSync(join(__dirname, '..', 'layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
   });
 
-  it('page.tsx gates approval/authorization sections behind fresh SELCOM_INTEGRATION_REAUTH_PURPOSE re-authentication', () => {
+  // The operating model changed before live payout activation (see
+  // docs/SELCOM_PRODUCTION_READINESS_REPORT.md's "Disbursement Integration
+  // Retired" section). This page is now a permanently read-only historical
+  // record: canManageChecklist/canApproveFinance/canApproveCompliance/
+  // canAuthorize are hardcoded false rather than computed from the
+  // caller's actual permissions, so every viewer — including Super Admin —
+  // sees a pure display-only view. No re-authentication is requested to
+  // view an archived record with nothing left to authorize.
+  it('page.tsx hardcodes every manage/approve/authorize flag to false rather than computing it from the caller\'s permissions — no further checklist items, approvals, or authorizations can be recorded', () => {
     const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
-    expect(source).toContain('hasRecentReauth(SELCOM_INTEGRATION_REAUTH_PURPOSE)');
-    expect(source).toContain('SelcomReauthPrompt');
+    expect(source).toContain('const canManageChecklist = false;');
+    expect(source).toContain('const canApproveFinance = false;');
+    expect(source).toContain('const canApproveCompliance = false;');
+    expect(source).toContain('const canAuthorize = false;');
+    expect(source).not.toContain("requirePermission('selcom_production.manage_checklist')");
+    expect(source).not.toContain("requirePermission('selcom_production.approve_finance')");
+    expect(source).not.toContain("requirePermission('selcom_production.approve_compliance')");
+    expect(source).not.toContain("requirePermission('selcom_production.authorize')");
+  });
+
+  it('page.tsx displays the exact required archived label', () => {
+    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
+    expect(source).toContain('Archived — operating model changed before live payout activation.');
+  });
+
+  it('page.tsx no longer gates viewing behind re-authentication — there is nothing left to authorize', () => {
+    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
+    expect(source).not.toContain('hasRecentReauth');
+    expect(source).not.toContain('SelcomReauthPrompt');
   });
 
   it('page.tsx shows a clear LIVE badge via SelcomEnvironmentBadge', () => {
@@ -41,9 +74,9 @@ describe('Production Readiness — sidebar permission matches page enforcement',
     expect(source).toContain('SelcomEnvironmentBadge');
   });
 
-  it('page.tsx never claims authorization makes production live by itself', () => {
+  it('page.tsx states this workflow will not resume, stronger than the old "not by itself" caveat now that it is archived', () => {
     const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
-    expect(source).toMatch(/makes production live by itself/i);
+    expect(source).toMatch(/will not resume/i);
   });
 });
 

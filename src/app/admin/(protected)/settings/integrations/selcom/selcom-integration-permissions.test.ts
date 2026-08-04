@@ -9,20 +9,37 @@ const MIGRATION_PATH = join(
   'supabase', 'migrations', '20260817000000_create_selcom_integration_settings.sql'
 );
 
-describe('Selcom Disbursement API integration — sidebar permission matches page enforcement', () => {
+// The Disbursement API integration modeled BizLink as the party
+// disbursing merchant funds via Selcom. BizLink Africa does not receive,
+// hold, disburse or settle merchant funds and has no disbursement account
+// to configure, so "Integrations: Disbursement API" (and its nested
+// "Disbursement API: Production Readiness") were removed from the
+// Administration group in the sidebar — see navigation.ts and
+// src/lib/archived-financial-prototype.ts. Nothing was deleted: page.tsx
+// and actions.ts still independently enforce their original permissions,
+// and the underlying DB grants were never revoked.
+describe('Selcom Disbursement API integration — dissolved sidebar item, route archived and Super-Admin gated', () => {
   const group = NAV_GROUPS.find((g) => g.label === 'Administration');
   if (!group) throw new Error('Administration group not found in navigation.ts');
 
-  const item = group.items.find((i) => i.href === '/admin/settings/integrations/selcom');
-
-  it('Administration includes a Disbursement API item gated by integrations.selcom.view', () => {
-    expect(item).toBeDefined();
-    expect(item?.permission).toBe('integrations.selcom.view');
+  it('Administration no longer includes a Disbursement API item (stays caught if someone re-adds it without going through the archival process)', () => {
+    const item = group.items.find((i) => i.href === '/admin/settings/integrations/selcom');
+    expect(item).toBeUndefined();
   });
 
-  it('page.tsx requires integrations.selcom.view', () => {
+  it('no item in Administration mentions "Disbursement API" at all', () => {
+    const item = group.items.find((i) => i.label.includes('Disbursement API'));
+    expect(item).toBeUndefined();
+  });
+
+  it('page.tsx still requires integrations.selcom.view, even though it is no longer linked from the sidebar', () => {
     const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
     expect(source).toContain(`requirePermission('integrations.selcom.view')`);
+  });
+
+  it('layout.tsx wires up the archived-prototype access gate (Super Admin only)', () => {
+    const source = readFileSync(join(__dirname, 'layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
   });
 
   it('page.tsx separately checks manage/test/balance permissions for conditional rendering', () => {

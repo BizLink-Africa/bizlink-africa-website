@@ -87,162 +87,68 @@ beforeEach(() => {
   });
 });
 
-describe('permission gating — every mutating action requires server-side permission, never trusts the client', () => {
-  it('prepareSettlementBatch requires settlement.prepare', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+// Settlement batches (including balance reservation for them) are not
+// handled by BizLink Africa — BizLink Africa does not receive, hold,
+// reconcile, disburse or settle merchant funds, so there is no settlement
+// batch to prepare, review, approve, hold or process. Every exported
+// action in ./actions.ts calls assertMerchantSettlementsNotBizLinkManaged()
+// as its very first statement (see BIZLINK_MANAGES_MERCHANT_SETTLEMENTS in
+// src/lib/archived-financial-prototype.ts), so every one of them must fail
+// unconditionally, before ever reaching a permission check, validation, the
+// Selcom balance check/reservation, or the RPC/DB layer — regardless of
+// what the caller's permissions are. See
+// src/app/admin/(protected)/chargebacks/actions.test.ts for the sibling
+// module this pattern was first applied to, and
+// src/lib/archived-financial-prototype.ts for the guard itself.
+describe('settlement batches are not handled by BizLink Africa — always blocked', () => {
+  const cases: [string, () => Promise<{ success: boolean; message?: string }>][] = [
+    ['prepareSettlementBatch', () => prepareSettlementBatch('2026-08-01', null)],
+    ['submitSettlementBatchForReview', () => submitSettlementBatchForReview('batch-1', null)],
+    ['reviewSettlementBatch', () => reviewSettlementBatch('batch-1', 'ok')],
+    ['rejectSettlementBatch', () => rejectSettlementBatch('batch-1', 'a good reason')],
+    ['approveSettlementBatch', () => approveSettlementBatch('batch-1', 'ok')],
+    ['placeSettlementBatchHold', () => placeSettlementBatchHold('batch-1', 'a reason')],
+    ['releaseSettlementBatchHold', () => releaseSettlementBatchHold('batch-1', '')],
+    ['emergencyCancelSettlementBatch', () => emergencyCancelSettlementBatch('batch-1', 'a reason')],
+    ['processSettlementBatch', () => processSettlementBatch('batch-1')],
+  ];
+
+  for (const [name, action] of cases) {
+    it(`${name} is permanently blocked, even when the caller has permission`, async () => {
+      const result = await action();
+      expect(result.success).toBe(false);
+      expect(result.message).toBe(
+        'Merchant payouts are not handled by BizLink Africa. Settlement is managed directly by each merchant through the approved payment partner.'
+      );
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(mockRefreshSelcomBalance).not.toHaveBeenCalled();
+      expect(mockLogAuditEvent).not.toHaveBeenCalled();
+    });
+  }
+
+  it('approveSettlementBatch never reserves Selcom balance for the batch — reserve-payout-balance is blocked too', async () => {
+    const result = await approveSettlementBatch('batch-1', 'ok');
+    expect(result.success).toBe(false);
+    expect(mockRpc).not.toHaveBeenCalledWith('reserve_selcom_balance_for_batch', expect.anything());
+  });
+
+  it('never reaches the permission check either — a caller with no permission at all gets the same archived message', async () => {
+    mockRequirePermission.mockRejectedValue(new Error('no'));
     const result = await prepareSettlementBatch('2026-08-01', null);
     expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRequirePermission).not.toHaveBeenCalled();
   });
 
-  it('submitSettlementBatchForReview requires settlement.prepare', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await submitSettlementBatchForReview('batch-1', null);
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('reviewSettlementBatch requires settlement.review', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await reviewSettlementBatch('batch-1', 'ok');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('rejectSettlementBatch requires settlement.review', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await rejectSettlementBatch('batch-1', 'a good reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('approveSettlementBatch requires settlement.approve', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+  it('approveSettlementBatch never checks the Selcom balance — the archived guard fires before that step', async () => {
     const result = await approveSettlementBatch('batch-1', 'ok');
     expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRefreshSelcomBalance).not.toHaveBeenCalled();
   });
 
-  it('placeSettlementBatchHold requires settlement.compliance_hold', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await placeSettlementBatchHold('batch-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('releaseSettlementBatchHold requires settlement.compliance_hold', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await releaseSettlementBatchHold('batch-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('emergencyCancelSettlementBatch requires settlement.emergency', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await emergencyCancelSettlementBatch('batch-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('processSettlementBatch requires settlement.process', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+  it('processSettlementBatch never runs the sandbox payout adapter per line — nothing is ever processed', async () => {
     const result = await processSettlementBatch('batch-1');
     expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-});
-
-describe('reason-required validations — approval/hold/cancellation decisions cannot be silent', () => {
-  it('rejectSettlementBatch rejects an empty reason before calling the RPC', async () => {
-    const result = await rejectSettlementBatch('batch-1', '   ');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('placeSettlementBatchHold rejects an empty reason before calling the RPC', async () => {
-    const result = await placeSettlementBatchHold('batch-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('emergencyCancelSettlementBatch rejects an empty reason before calling the RPC', async () => {
-    const result = await emergencyCancelSettlementBatch('batch-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-});
-
-describe('server-side error surfacing — RPC/database rejections (e.g. maker-checker violations) are never swallowed', () => {
-  it('surfaces a maker-checker violation message from approve_settlement_batch', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'Maker-checker violation: the approver must be different from the preparer' } });
-    const result = await approveSettlementBatch('batch-1', 'ok');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Maker-checker violation');
-  });
-
-  it('audit-logs a successful approval', async () => {
-    const result = await approveSettlementBatch('batch-1', 'looks good');
-    expect(result.success).toBe(true);
-    expect(mockLogAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ actionType: 'approve', module: 'settlement_batches', recordId: 'batch-1' })
-    );
-  });
-});
-
-describe('approveSettlementBatch — Selcom balance verification before approval', () => {
-  it('checks a fresh Selcom balance (trigger_type batch_approval) before calling approve_settlement_batch', async () => {
-    await approveSettlementBatch('batch-1', 'ok');
-    expect(mockRefreshSelcomBalance).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ triggerType: 'batch_approval', batchId: 'batch-1' })
-    );
-    expect(mockRpc).toHaveBeenCalledWith('approve_settlement_batch', expect.objectContaining({ p_available_balance: 50000000 }));
-  });
-
-  it('refuses to approve when the balance check itself fails, without ever calling approve_settlement_batch', async () => {
-    mockRefreshSelcomBalance.mockResolvedValue({
-      querySucceeded: false,
-      availableBalance: null,
-      accountActive: null,
-      currency: null,
-      maskedAccountNumber: null,
-      errorMessage: 'Selcom balance check failed.',
-    });
-    const result = await approveSettlementBatch('batch-1', 'ok');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalledWith('approve_settlement_batch', expect.anything());
-  });
-
-  it('surfaces an insufficient-balance rejection from the database as the action result message', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'Insufficient cleared Selcom disbursement balance: available 100, already reserved for other batches 0, this batch requires 5000.' } });
-    const result = await approveSettlementBatch('batch-1', 'ok');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Insufficient cleared Selcom disbursement balance');
-  });
-});
-
-describe('processSettlementBatch — runs the sandbox adapter per line, never a real payout call', () => {
-  it('begins processing, then applies a payout result RPC call for every pending line', async () => {
-    const result = await processSettlementBatch('batch-1');
-    expect(result.success).toBe(true);
-
-    const rpcCalls = mockRpc.mock.calls.map((c) => c[0]);
-    expect(rpcCalls).toContain('begin_settlement_batch_processing');
-    expect(rpcCalls.filter((name) => name === 'apply_settlement_line_payout_result')).toHaveLength(2);
-  });
-
-  it('reports a failed result (no beneficiary) for a line with no beneficiary on file', async () => {
-    await processSettlementBatch('batch-1');
-    const failedCall = mockRpc.mock.calls.find(
-      (c) => c[0] === 'apply_settlement_line_payout_result' && c[1].p_line_id === 'line-2'
-    );
-    expect(failedCall?.[1].p_status).toBe('failed');
-  });
-
-  it('stops before calling any line-level RPC if begin_settlement_batch_processing fails', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'This batch is on compliance hold and cannot be processed' } });
-    const result = await processSettlementBatch('batch-1');
-    expect(result.success).toBe(false);
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).not.toHaveBeenCalledWith('begin_settlement_batch_processing', expect.anything());
+    expect(mockRpc).not.toHaveBeenCalledWith('apply_settlement_line_payout_result', expect.anything());
   });
 });

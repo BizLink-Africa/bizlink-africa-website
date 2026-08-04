@@ -23,6 +23,7 @@ export default function PayoutActions({
   canApprove,
   canSubmit,
   canHold,
+  settlementsManagedByBizLink,
 }: {
   payoutId: string;
   status: MerchantPayoutStatus;
@@ -31,6 +32,19 @@ export default function PayoutActions({
   canApprove: boolean;
   canSubmit: boolean;
   canHold: boolean;
+  // BizLink Africa does not manage merchant settlement (see
+  // BIZLINK_MANAGES_MERCHANT_SETTLEMENTS in
+  // src/lib/archived-financial-prototype.ts) — always false in production.
+  // Every mutating button below (Approve/Cancel/Submit/Retry/Hold/Release/
+  // Reverse) is hidden when this is false, regardless of the canManage/
+  // canApprove/canSubmit/canHold permission props, since those only reflect
+  // the caller's role and would otherwise still show a button that can only
+  // ever fail. "Check Status" stays visible either way — it's a read-only
+  // technical check, not a fund-movement action. The UI hiding these
+  // buttons is a courtesy; the actual enforcement is server-side in
+  // payouts/actions.ts, which blocks unconditionally even if this prop were
+  // somehow wrong.
+  settlementsManagedByBizLink: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -71,43 +85,50 @@ export default function PayoutActions({
       {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-3">{error}</p>}
       {message && <p className="text-sm text-[#1b7a3d] bg-green-50 border border-green-200 px-4 py-3">{message}</p>}
 
+      {!settlementsManagedByBizLink && (
+        <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 px-4 py-3">
+          Merchant payouts are not handled by BizLink Africa. Settlement is managed directly by each merchant
+          through the approved payment partner.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        {canApprove && status === 'pending_approval' && (
+        {settlementsManagedByBizLink && canApprove && status === 'pending_approval' && (
           <button type="button" disabled={pending} onClick={() => run(() => approvePayout(payoutId))} className="text-sm font-medium text-white bg-[#1b7a3d] px-4 py-2 hover:bg-[#166030] transition-colors disabled:opacity-60">
             Approve
           </button>
         )}
 
-        {(canManage || canApprove) && ['pending_approval', 'approved'].includes(status) && (
+        {settlementsManagedByBizLink && (canManage || canApprove) && ['pending_approval', 'approved'].includes(status) && (
           <button type="button" onClick={() => setActiveForm(activeForm === 'cancel' ? null : 'cancel')} className="text-sm font-medium text-[#8a1f1f] border border-[#8a1f1f] px-4 py-2 hover:bg-[#8a1f1f] hover:text-white transition-colors">
             Cancel Before Submission
           </button>
         )}
 
-        {canSubmit && status === 'approved' && (
+        {settlementsManagedByBizLink && canSubmit && status === 'approved' && (
           <button type="button" disabled={pending} onClick={() => run(() => submitPayout(payoutId))} className="text-sm font-medium text-white bg-[#6b21a8] px-4 py-2 hover:bg-[#581c87] transition-colors disabled:opacity-60">
             {pending ? 'Submitting to Selcom sandbox…' : 'Submit to Selcom Sandbox (SANDBOX — NO LIVE FUNDS)'}
           </button>
         )}
 
-        {canManage && status === 'failed' && retryCount < MAX_PAYOUT_RETRIES && (
+        {settlementsManagedByBizLink && canManage && status === 'failed' && retryCount < MAX_PAYOUT_RETRIES && (
           <button type="button" disabled={pending} onClick={() => run(() => retryPayout(payoutId))} className="text-sm font-medium text-white bg-[#8a5a00] px-4 py-2 hover:bg-[#6e4700] transition-colors disabled:opacity-60">
             Retry ({retryCount}/{MAX_PAYOUT_RETRIES} used)
           </button>
         )}
 
-        {canHold && !['successful', 'reversed', 'cancelled', 'held'].includes(status) && (
+        {settlementsManagedByBizLink && canHold && !['successful', 'reversed', 'cancelled', 'held'].includes(status) && (
           <button type="button" onClick={() => setActiveForm(activeForm === 'hold' ? null : 'hold')} className="text-sm font-medium text-[#8a5a00] border border-[#8a5a00] px-4 py-2 hover:bg-[#8a5a00] hover:text-white transition-colors">
             Place on Hold
           </button>
         )}
-        {canHold && status === 'held' && (
+        {settlementsManagedByBizLink && canHold && status === 'held' && (
           <button type="button" disabled={pending} onClick={() => run(() => releasePayoutHold(payoutId, ''))} className="text-sm font-medium text-[#1b7a3d] border border-[#1b7a3d] px-4 py-2 hover:bg-[#1b7a3d] hover:text-white transition-colors disabled:opacity-60">
             Release Hold
           </button>
         )}
 
-        {canApprove && status === 'successful' && (
+        {settlementsManagedByBizLink && canApprove && status === 'successful' && (
           <button type="button" onClick={() => setActiveForm(activeForm === 'reverse' ? null : 'reverse')} className="text-sm font-medium text-red-700 border border-red-700 px-4 py-2 hover:bg-red-700 hover:text-white transition-colors">
             Reverse
           </button>
@@ -120,13 +141,13 @@ export default function PayoutActions({
         )}
       </div>
 
-      {activeForm === 'cancel' && (
+      {settlementsManagedByBizLink && activeForm === 'cancel' && (
         <ReasonForm pending={pending} reason={reason} setReason={setReason} label="Cancellation Reason (required)" buttonLabel="Confirm Cancellation" buttonClass="bg-[#8a1f1f] hover:bg-[#6e1919]" onSubmit={() => run(() => cancelPayout(payoutId, reason))} />
       )}
-      {activeForm === 'hold' && (
+      {settlementsManagedByBizLink && activeForm === 'hold' && (
         <ReasonForm pending={pending} reason={reason} setReason={setReason} label="Hold Reason (required)" buttonLabel="Confirm Hold" buttonClass="bg-[#8a5a00] hover:bg-[#6e4700]" onSubmit={() => run(() => placePayoutHold(payoutId, reason))} />
       )}
-      {activeForm === 'reverse' && (
+      {settlementsManagedByBizLink && activeForm === 'reverse' && (
         <ReasonForm pending={pending} reason={reason} setReason={setReason} label="Reversal Reason (required)" buttonLabel="Confirm Reversal" buttonClass="bg-red-700 hover:bg-red-800" onSubmit={() => run(() => reversePayout(payoutId, reason))} />
       )}
     </div>

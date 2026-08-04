@@ -1,5 +1,90 @@
 # Selcom Business Production Disbursement — Readiness Verification Report
 
+> ## ⚠️ Disbursement Integration Retired — Merchant-Managed Settlement Model
+>
+> **Change date:** 2026-08-26
+>
+> **Confirmed operating model:** Every merchant holds and manages their own
+> payment account, wallet, or till and settles directly with their approved
+> payment partner. BizLink Africa provides ICT infrastructure, merchant
+> onboarding coordination, integrations, and technical support only. BizLink
+> Africa does not receive, hold, control, reconcile, disburse, or settle
+> merchant funds.
+>
+> **Everything below this notice describes a disbursement integration that
+> is now permanently retired.** The go-live process this report documents
+> — bringing BizLink Africa's own Selcom disbursement account to production
+> so BizLink could execute merchant payouts — will not proceed. The three
+> sign-offs requested at the bottom of this report (Super Admin, Finance
+> Approver, Compliance Officer) are no longer being sought for that purpose.
+>
+> **Functionality disabled:**
+> - Payout creation, approval, submission, retry, cancellation, hold, and
+>   reversal (`src/app/admin/(protected)/payouts/actions.ts`)
+> - Settlement batch creation, review, approval, hold, and processing
+>   (`src/app/admin/(protected)/settlement/actions.ts`)
+> - Selcom balance-reservation for settlement batches
+> - The Selcom disbursement API integration settings and Production
+>   Readiness activation workflow
+>   (`src/app/admin/(protected)/settings/integrations/selcom/**`)
+> - The status-check cron's automatic 5-minute schedule
+>   (`.github/workflows/selcom-status-check-cron.yml`) — disabled, kept
+>   reachable via manual dispatch only
+> - "Settlement Deduction" as a chargeback recovery method
+> - All of the above are enforced server-side by a permanent guard
+>   (`assertMerchantSettlementsNotBizLinkManaged()` in
+>   `src/lib/archived-financial-prototype.ts`), gated by the central flag
+>   `BIZLINK_MANAGES_MERCHANT_SETTLEMENTS` (default and required: `false`),
+>   independent of and in addition to the pre-existing
+>   `SELCOM_LIVE_PAYOUTS_ENABLED` / `SELCOM_PRODUCTION_ACTIVATION_ENABLED`
+>   gates documented in this report, which also remain `false`.
+>
+> **No live payout was ever initiated.** As this report's own "Headline
+> status" section below already states, no Selcom API call carrying real
+> transaction/disbursement data was made during the original readiness
+> verification, and `SELCOM_LIVE_PAYOUTS_ENABLED` was never enabled. No
+> payout has been initiated since, under either the sandbox or production
+> Selcom configuration.
+>
+> **Historical controls retained for audit.** Nothing described in this
+> report — code, database tables, RLS policies, maker-checker functions,
+> audit-log triggers, or the sign-off checklist below — has been deleted.
+> All settlement, payout, collection, and commission records remain in
+> place and queryable by Super Admin for audit/history purposes. What
+> changed is access (Super Admin only, via
+> `checkArchivedFinancialPrototypeAccess()`) and mutability (permanently
+> read-only) — not the historical record itself.
+>
+> Preserved, non-financial integration capabilities (unaffected by this
+> change): merchant account/till status, transaction-status viewing (see
+> `/admin/integration-health/transactions`), the Selcom callback endpoint
+> (technical monitoring), API connection health, and general merchant
+> integration support.
+
+---
+
+## Final Zero-Touch Fund Restoration Audit
+
+**Date:** 2026-08-04
+**Branch:** `operating-model/merchant-managed-settlement`
+**Prepared by:** Claude Code, acting as security/release verification assistant
+**Scope:** Final end-to-end audit confirming the merchant-managed settlement model is fully and consistently restored across the public website, the Super Admin Dashboard, and the database, before this report is closed out.
+
+Verified and recorded for the audit trail:
+
+1. **Merchant-managed settlement confirmed.** Every merchant holds and manages their own payment account, wallet, or till and settles directly with their approved payment partner. This is stated consistently across the public website (Home, Solutions, Partnership Approach, Contact, Merchant Payment Infrastructure, Privacy Policy, Terms of Service, Footer, SEO metadata) and the Super Admin Dashboard's Payment Integration Health page.
+2. **BizLink disbursement launch cancelled.** The production disbursement go-live process this report originally documented (bringing BizLink Africa's own Selcom disbursement account to production) will not proceed. The Production Readiness checklist and approval workflow are preserved read-only, Super-Admin-only, at `/admin/settings/integrations/selcom/production-readiness`, labeled "Archived — operating model changed before live payout activation."
+3. **Live payouts never enabled.** `SELCOM_LIVE_PAYOUTS_ENABLED` has remained `false`/unset in every configuration this project has ever used. Confirmed again in this audit against both `.env.example` and `.env.local`.
+4. **No production payout sent.** No Selcom disbursement API call carrying real transaction data has ever been made from this codebase, in any session, sandbox or production.
+5. **Financial prototype archived.** All settlement, payout, collection, commission-rule, chargeback, and beneficiary functionality is gated read-only via `assertArchivedFinancialPrototypeReadOnly()` / `assertMerchantSettlementsNotBizLinkManaged()` (`src/lib/archived-financial-prototype.ts`), independent of and in addition to the pre-existing Selcom flags. No records were deleted; all remain queryable by Super Admin for audit/history.
+6. **Website and legal wording restored.** The public site, Privacy Policy, and Terms of Service state the zero-touch model in provider-neutral language; the payment partner is never named publicly. Contact details verified exact: `info@bizlinkafrica.net`, `support@bizlinkafrica.net`, `+255 747 730 270`.
+
+**Verification run for this audit:** secret scan (clean — no tracked secrets, no `NEXT_PUBLIC_`/client-side credential leakage), full wording scan (no "BizLink receives/collects/holds/settles/disburses/controls" claims outside this historical report, no public mention of the payment partner name), lint (0 errors), `tsc --noEmit` (0 errors), full test suite (98 files / 991 tests passed), `npm run build` (passed), and a scan of the built output for secret-like strings (clean).
+
+**Open item carried forward (not blocking, requires separate deliberate review):** `supabase/migrations/20260827000000_archive_settlement_facilitator_model.sql` — prepared and cross-verified against the live schema, but intentionally **not applied**, per explicit prior instruction not to auto-apply it. Until applied, the `authenticated` Postgres role retains direct RPC `EXECUTE` privilege on the archived money-moving `SECURITY DEFINER` functions at the database level, even though every application-layer entry point (server actions, UI controls, the lowest-level disbursement call) unconditionally blocks before any of them could be reached. This is a database-hardening follow-up, not a live fund-handling gap.
+
+---
+
 **Date:** 2026-08-02
 **Branch:** `master` (merged from `security/selcom-production-readiness`)
 **Latest commit verified:** `1d56cc6`, deployed as `dpl_2Bk1mbUoujCDesnodivohM1xDiMS`, state `READY`, aliased to `bizlinkafrica.net`, `www.bizlinkafrica.net`, and `admin.bizlinkafrica.net`

@@ -51,7 +51,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-sm leading-relaxed text-[#3f4945] mb-6 max-w-md">
-              BizLink Africa Limited helps startups, SMEs, service providers, and online businesses automate sales, customer care, social commerce, and merchant payment integration and settlement through approved payment infrastructure partners.
+              BizLink Africa Limited helps startups, SMEs, service providers, and online businesses automate sales, customer care, social commerce, and merchant payment integration support through approved payment partners — with each merchant managing their own payment account and settlement directly.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -61,9 +61,9 @@ export default function HomePage() {
             {/* Trust indicators row */}
             <div className="flex flex-wrap gap-4 pt-4 border-t border-[#bfc9c4]">
               {[
-                { icon: CheckCircle, label: 'Controlled merchant settlement' },
-                { icon: Shield, label: 'Approved payment infrastructure' },
-                { icon: BadgeCheck, label: 'Offline onboarding' },
+                { icon: CheckCircle, label: 'Direct merchant settlement' },
+                { icon: Shield, label: 'Provider-neutral integration support' },
+                { icon: BadgeCheck, label: 'Secure offline onboarding' },
               ].map(({ icon: Icon, label }) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <Icon size={13} className="text-[#00342b] shrink-0" />
@@ -222,7 +222,7 @@ export default function HomePage() {
           <SectionHeading
             badge="Our Model"
             title="We Build the Bridge, You Maintain Control"
-            subtitle="BizLink Africa coordinates merchant onboarding and payment-technology integration, and manages transaction reconciliation and settlement through approved payment infrastructure partners."
+            subtitle="BizLink Africa coordinates merchant onboarding and payment-technology integration through approved payment partners. Each merchant maintains their own payment account and manages settlement directly with the applicable partner."
             center
             light
           />

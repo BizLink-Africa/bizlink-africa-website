@@ -7,6 +7,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { isValidMoneyString } from '@/lib/collections/money';
 import { parseCollectionStatementCsv } from '@/lib/collections/csv-parser';
 import { SandboxProviderAdapter, type ProviderTransactionRow } from '@/lib/collections/provider-adapter';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -126,6 +127,11 @@ async function importRows(rows: ProviderTransactionRow[], sourceFileReference: s
 }
 
 export async function importCollectionStatementCsv(formData: FormData): Promise<ImportResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
     return { success: false, message: 'Please select a CSV file.' };
@@ -152,6 +158,11 @@ export async function importCollectionStatementCsv(formData: FormData): Promise<
 // Sandbox mode: generates deterministic synthetic rows via
 // SandboxProviderAdapter — no real provider connection, clearly labeled.
 export async function importSandboxStatement(fromDate: string, toDate: string): Promise<ImportResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   const adapter = new SandboxProviderAdapter();
   const rows = await adapter.fetchStatement({ from: fromDate, to: toDate });
   return importRows(rows, `sandbox:${fromDate}:${toDate}`, 'sandbox');
@@ -162,6 +173,11 @@ export async function requestManualAdjustment(
   adjustmentAmount: string,
   reason: string
 ): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('collections.manage');
@@ -209,6 +225,11 @@ export async function reviewManualAdjustment(
   decision: 'approve' | 'reject',
   reviewNotes: string
 ): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('collections.approve');

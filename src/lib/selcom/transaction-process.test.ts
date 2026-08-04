@@ -39,12 +39,69 @@ const VALID_REQUEST = {
 beforeEach(() => {
   vi.stubEnv('SELCOM_INTEGRATION_ENABLED', 'true');
   vi.stubEnv('SELCOM_LIVE_PAYOUTS_ENABLED', '');
+  // The BIZLINK_MANAGES_MERCHANT_SETTLEMENTS gate (see
+  // 'BizLink does not manage merchant settlement' describe block below) is
+  // the most fundamental of the three and is checked first — every test in
+  // the OTHER describe blocks below is exercising the two gates
+  // *underneath* it, so it must be explicitly satisfied here for those
+  // tests to reach the code they're actually testing.
+  vi.stubEnv('BIZLINK_MANAGES_MERCHANT_SETTLEMENTS', 'true');
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+
+// BizLink Africa does not manage merchant settlement — merchants settle
+// directly with their approved payment partner. This is the most
+// fundamental gate: checked first, ahead of the two deployment-level
+// Selcom flags below, and unaffected by whether they're satisfied.
+describe('initiateDisbursement — BizLink does not manage merchant settlement (checked first, ahead of the Selcom flags)', () => {
+  it('refuses to run when BIZLINK_MANAGES_MERCHANT_SETTLEMENTS is unset (the required default), even with both Selcom flags satisfied, and never calls fetch', async () => {
+    vi.stubEnv('BIZLINK_MANAGES_MERCHANT_SETTLEMENTS', '');
+    vi.stubEnv('SELCOM_LIVE_PAYOUTS_ENABLED', 'true');
+    const { getSelcomConfig } = await import('./config');
+    vi.mocked(getSelcomConfig).mockReturnValue({ ...SANDBOX_CONFIG, env: 'production' });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { initiateDisbursement } = await import('./transaction-process');
+
+    await expect(initiateDisbursement(VALID_REQUEST)).rejects.toThrow(
+      'Merchant payouts are not handled by BizLink Africa. Settlement is managed directly by each merchant through the approved payment partner.'
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses to run in sandbox too — this gate applies regardless of environment', async () => {
+    vi.stubEnv('BIZLINK_MANAGES_MERCHANT_SETTLEMENTS', '');
+    const { getSelcomConfig } = await import('./config');
+    vi.mocked(getSelcomConfig).mockReturnValue(SANDBOX_CONFIG);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { initiateDisbursement } = await import('./transaction-process');
+
+    await expect(initiateDisbursement(VALID_REQUEST)).rejects.toThrow(/not handled by BizLink Africa/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('treats any value other than exactly "true" as not-managed — no live payout can be submitted by misconfiguration', async () => {
+    for (const value of ['false', '1', 'yes', 'TRUE_ISH']) {
+      vi.stubEnv('BIZLINK_MANAGES_MERCHANT_SETTLEMENTS', value);
+      const { getSelcomConfig } = await import('./config');
+      vi.mocked(getSelcomConfig).mockReturnValue(SANDBOX_CONFIG);
+      const fetchSpy = vi.fn();
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const { initiateDisbursement } = await import('./transaction-process');
+
+      await expect(initiateDisbursement(VALID_REQUEST)).rejects.toThrow(/not handled by BizLink Africa/);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    }
+  });
 });
 
 describe('initiateDisbursement — SELCOM_INTEGRATION_ENABLED gate (required for every environment)', () => {

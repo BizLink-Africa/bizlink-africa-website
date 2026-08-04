@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import { COMPANY } from '@/data/website';
 
-// Legal review required before final publication.
+// Legal review is recommended before publication of this policy.
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
-    'How BizLink Africa Limited collects, uses, and protects information gathered through our website, merchant onboarding, and payment services.',
+    'How BizLink Africa Limited collects, uses, and protects information gathered through our website, merchant onboarding coordination, and payment-integration support services.',
 };
+
+const LAST_UPDATED = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
 const h2Class = 'font-[Geist,sans-serif] font-bold text-xl text-[#00342b] mt-10 mb-3';
 const pClass = 'text-[#3f4945] leading-relaxed';
@@ -17,43 +19,43 @@ export default function PrivacyPolicyPage() {
   return (
     <section className="max-w-3xl mx-auto px-6 md:px-12 pt-20 pb-24">
       <h1 className="font-[Geist,sans-serif] font-bold text-3xl md:text-4xl text-[#1b1c1c] mb-2">Privacy Policy</h1>
-      <p className="text-sm text-[#707975] mb-10">Last updated: July 2026</p>
+      <p className="text-sm text-[#707975] mb-10">Last updated: {LAST_UPDATED}</p>
 
       <p className={pClass}>
         BizLink Africa Limited respects user privacy and is committed to protecting personal information collected
-        through the website, inquiry forms, merchant onboarding, payment integration and settlement coordination,
-        support channels, and other business service requests. This policy explains what information we collect,
-        how it is used, and how it is protected.
+        through the website, inquiry forms, merchant onboarding coordination, payment-integration support, support
+        channels, and other business service requests. This policy explains what information we collect, how it is
+        used, and how it is protected.
       </p>
 
       <div className="mt-6 border border-[#afefdd] bg-[#afefdd]/10 p-5">
         <p className="text-sm text-[#3f4945] leading-relaxed">
-          Merchant activation and payment services may require BizLink Africa to securely transmit relevant
-          onboarding information to approved payment infrastructure partners for verification, account setup,
-          transaction processing and compliance purposes.
+          Each merchant maintains and manages their own payment account or wallet with the applicable approved
+          payment partner. BizLink Africa does not receive, hold, control or settle merchant funds. Relevant
+          onboarding information may be securely shared with an approved payment partner where required for
+          verification, account setup and integration.
         </p>
       </div>
 
       <h2 className={h2Class}>1. Information We Collect</h2>
       <p className={pClass}>Depending on the services requested, we may collect:</p>
       <ul className={ulClass}>
-        <li>Identity and contact information</li>
-        <li>Business registration details</li>
-        <li>Business ownership and representative information</li>
-        <li>Merchant onboarding information</li>
-        <li>Business licences and tax information</li>
-        <li>Settlement beneficiary information</li>
-        <li>Bank-account or mobile-wallet information</li>
-        <li>Transaction and reconciliation records</li>
+        <li>Contact details</li>
+        <li>Business/company details</li>
+        <li>Business category and location</li>
+        <li>Service requirements</li>
+        <li>Onboarding information</li>
+        <li>Technical integration information</li>
         <li>Support and communication records</li>
-        <li>Device, IP and security-event information</li>
+        <li>Security and website-usage information</li>
+        <li>KYC documentation — collected only through protected or offline onboarding processes where required</li>
       </ul>
 
       <h2 className={h2Class}>2. Sensitive Information</h2>
       <p className={pClass}>
-        Merchant onboarding may involve sensitive information, including identity, business, financial, or
-        settlement details. This information receives additional protection and is only accessed and used for the
-        purposes described in this policy.
+        Merchant onboarding may involve sensitive information, including identity, business ownership, or
+        KYC-related information. This information receives additional protection and is only accessed and used for
+        the purposes described in this policy.
       </p>
 
       <h2 className={h2Class}>3. How Information Is Collected</h2>
@@ -63,33 +65,31 @@ export default function PrivacyPolicyPage() {
         <li>A protected onboarding portal</li>
         <li>Direct business communication</li>
         <li>Approved integration partners</li>
-        <li>Transaction and settlement systems</li>
+        <li>Payment partner systems, where information is shared for onboarding and verification purposes</li>
         <li>Support channels</li>
       </ul>
 
       <h2 className={h2Class}>4. How We Use Information</h2>
-      <p className={pClass}>
-        BizLink Africa coordinates the collection and preliminary review of merchant information. Final KYC
-        verification, approval decisions, and account or till activation are carried out by the approved payment
-        infrastructure partner, not by BizLink Africa. We use information to:
-      </p>
+      <p className={pClass}>We use the information we collect to:</p>
       <ul className={ulClass}>
-        <li>Conduct preliminary merchant assessment</li>
-        <li>Coordinate KYC with the approved payment infrastructure partner</li>
-        <li>Support account or till activation</li>
-        <li>Provide payment integration</li>
-        <li>Perform transaction reconciliation</li>
-        <li>Facilitate merchant settlement</li>
-        <li>Support fraud, AML and risk review</li>
-        <li>Handle chargebacks and disputes</li>
+        <li>Respond to inquiries</li>
+        <li>Provide ICT consultation</li>
+        <li>Coordinate merchant onboarding</li>
+        <li>Support technical integration</li>
+        <li>Configure services</li>
         <li>Provide support</li>
-        <li>Meet audit and legal compliance requirements</li>
+        <li>Maintain security</li>
+        <li>Maintain compliance and audit records</li>
       </ul>
+      <p className={`${pClass} mt-3`}>
+        Final KYC verification and account or till activation are carried out by the approved payment partner, not
+        by BizLink Africa.
+      </p>
 
       <h2 className={h2Class}>5. Information Sharing</h2>
       <p className={pClass}>We may share necessary information only with:</p>
       <ul className={ulClass}>
-        <li>Approved payment infrastructure partners</li>
+        <li>Approved payment partners</li>
         <li>Banks or mobile-wallet operators</li>
         <li>Authorised BizLink Africa staff</li>
         <li>Technical service providers supporting our systems</li>
@@ -101,12 +101,18 @@ export default function PrivacyPolicyPage() {
         never disclosed as part of this information sharing.
       </p>
 
-      <h2 className={h2Class}>6. Settlement Information</h2>
+      <h2 className={h2Class}>6. Payment Accounts and Fund Handling</h2>
       <p className={pClass}>
-        Where a merchant applies for payment infrastructure services, verified bank-account or mobile-wallet details
-        may be processed for the purpose of merchant settlement. This information is used only to facilitate
-        settlement in line with the applicable merchant arrangement and is not published or disclosed publicly.
+        Each merchant maintains and manages their own payment account or wallet with the applicable approved
+        payment partner. BizLink Africa does not receive, hold, control or settle merchant funds. Relevant
+        onboarding information may be securely shared with an approved payment partner where required for
+        verification, account setup and integration.
       </p>
+      <ul className={`${ulClass} mt-3`}>
+        <li>Full merchant bank or mobile-wallet settlement credentials should not be collected through the public website.</li>
+        <li>Final merchant verification and account activation may be conducted by the approved payment partner.</li>
+        <li>Third-party payment partners maintain their own privacy practices, independent of BizLink Africa.</li>
+      </ul>
 
       <h2 className={h2Class}>7. Data Security</h2>
       <p className={pClass}>We apply technical and organisational safeguards, including:</p>
@@ -123,8 +129,8 @@ export default function PrivacyPolicyPage() {
 
       <h2 className={h2Class}>8. Data Retention</h2>
       <p className={pClass}>
-        KYC, transaction, settlement, chargeback, and audit information may be retained for as long as necessary to
-        meet legal, contractual, and operational requirements.
+        KYC, onboarding, technical-integration, support, and audit information may be retained for as long as
+        necessary to meet legal, contractual, and operational requirements.
       </p>
 
       <h2 className={h2Class}>9. Merchant Responsibilities</h2>
@@ -146,9 +152,10 @@ export default function PrivacyPolicyPage() {
 
       <h2 className={h2Class}>12. Third-Party Services</h2>
       <p className={pClass}>
-        Our website and services may involve third-party providers, including hosting, analytics, communication, and
-        approved payment infrastructure providers. BizLink Africa is not responsible for the independent privacy
-        practices of third parties and does not disclose confidential third-party or partner agreement terms.
+        Our website and services may involve third-party providers, including hosting, analytics, communication,
+        and approved payment partners. Third-party payment partners maintain their own privacy practices, and
+        BizLink Africa is not responsible for their independent privacy practices. BizLink Africa does not disclose
+        confidential third-party or partner agreement terms.
       </p>
 
       <h2 className={h2Class}>13. Policy Updates</h2>
