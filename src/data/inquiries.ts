@@ -44,14 +44,6 @@ export const MERCHANT_MONTHLY_VOLUME_RANGES = [
 
 export type MerchantMonthlyVolumeRange = (typeof MERCHANT_MONTHLY_VOLUME_RANGES)[number]['value'];
 
-export const MERCHANT_SETTLEMENT_DESTINATIONS = [
-  { value: 'bank_account', label: 'Bank Account' },
-  { value: 'mobile_wallet', label: 'Mobile Wallet' },
-  { value: 'not_decided', label: 'Not Decided Yet' },
-] as const;
-
-export type MerchantSettlementDestination = (typeof MERCHANT_SETTLEMENT_DESTINATIONS)[number]['value'];
-
 export const MERCHANT_COLLECTION_METHODS = [
   { value: 'cash_only', label: 'Cash Only' },
   { value: 'mobile_money_manual', label: 'Mobile Money (Manual)' },
@@ -182,7 +174,6 @@ export interface Inquiry {
   merchant_business_registration_status: MerchantBusinessRegistrationStatus | null;
   merchant_business_type: MerchantBusinessType | null;
   merchant_monthly_volume_range: MerchantMonthlyVolumeRange | null;
-  merchant_settlement_destination: MerchantSettlementDestination | null;
   merchant_current_collection_method: MerchantCollectionMethod | null;
   merchant_business_locations_count: number | null;
   merchant_golive_timeline: MerchantGoLiveTimeline | null;
