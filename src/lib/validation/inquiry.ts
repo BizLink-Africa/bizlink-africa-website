@@ -79,7 +79,6 @@ export const inquirySchema = z
     requireChoice(data.merchantBusinessRegistrationStatus, 'merchantBusinessRegistrationStatus', 'Please select your business registration status.');
     requireChoice(data.merchantBusinessType, 'merchantBusinessType', 'Please select your business type.');
     requireChoice(data.merchantMonthlyVolumeRange, 'merchantMonthlyVolumeRange', 'Please select your estimated monthly transaction volume.');
-    requireChoice(data.merchantSettlementDestination, 'merchantSettlementDestination', 'Please select your preferred settlement destination.');
     requireChoice(data.merchantCurrentCollectionMethod, 'merchantCurrentCollectionMethod', 'Please select your current payment collection method.');
     requireChoice(data.merchantGoLiveTimeline, 'merchantGoLiveTimeline', 'Please select your expected go-live timeline.');
 

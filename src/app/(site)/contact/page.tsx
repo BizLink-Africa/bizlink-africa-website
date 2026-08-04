@@ -11,7 +11,6 @@ import {
   MERCHANT_BUSINESS_REGISTRATION_STATUSES,
   MERCHANT_BUSINESS_TYPES,
   MERCHANT_MONTHLY_VOLUME_RANGES,
-  MERCHANT_SETTLEMENT_DESTINATIONS,
   MERCHANT_COLLECTION_METHODS,
   MERCHANT_GOLIVE_TIMELINES,
 } from '@/data/inquiries';
@@ -36,7 +35,6 @@ const initialForm = {
   merchantBusinessRegistrationStatus: '',
   merchantBusinessType: '',
   merchantMonthlyVolumeRange: '',
-  merchantSettlementDestination: '',
   merchantCurrentCollectionMethod: '',
   merchantBusinessLocationsCount: '',
   merchantGoLiveTimeline: '',
@@ -410,26 +408,6 @@ export default function ContactPage() {
                         </select>
                         {fieldErrors.merchantGoLiveTimeline && <p className={errorClass}>{fieldErrors.merchantGoLiveTimeline}</p>}
                       </div>
-                    </div>
-
-                    <div className="mt-6">
-                      <p className={labelClass}>Preferred Settlement Destination</p>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2">
-                        {MERCHANT_SETTLEMENT_DESTINATIONS.map((o) => (
-                          <label key={o.value} className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="merchantSettlementDestination"
-                              value={o.value}
-                              checked={form.merchantSettlementDestination === o.value}
-                              onChange={handleChange}
-                              className="w-4 h-4 accent-[#00342b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00342b] focus-visible:ring-offset-2"
-                            />
-                            <span className="text-sm text-[#1b1c1c]">{o.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {fieldErrors.merchantSettlementDestination && <p className={errorClass}>{fieldErrors.merchantSettlementDestination}</p>}
                     </div>
 
                     <label className="flex items-start gap-3 py-1 mt-6 cursor-pointer">
