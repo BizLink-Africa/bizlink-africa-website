@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/supabase/dal';
+import { checkArchivedFinancialPrototypeAccess } from '@/lib/archived-financial-prototype';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 import { csvRow, csvResponseHeaders } from '@/lib/reports/csv';
 
 export async function GET(request: Request) {
+  const access = await checkArchivedFinancialPrototypeAccess();
+  if (!access.ok) {
+    return NextResponse.json({ error: 'This module is archived. BizLink Africa does not handle merchant funds or settlements.' }, { status: 403 });
+  }
+
   let user;
   try {
     user = await requirePermission('financial_reports.view');

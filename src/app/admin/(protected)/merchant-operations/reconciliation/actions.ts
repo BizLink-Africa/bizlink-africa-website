@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 import { isValidMoneyString } from '@/lib/collections/money';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 export interface RunReconciliationInput {
   fromDate: string;
@@ -18,6 +19,11 @@ export interface RunReconciliationInput {
 // run_collection_reconciliation() (Postgres SUM/CASE, exact numeric) — this
 // action never sums or compares monetary values itself.
 export async function runDailyReconciliation(input: RunReconciliationInput): Promise<{ success: boolean; message?: string; runId?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('collections.reconcile');
@@ -64,6 +70,11 @@ export async function runDailyReconciliation(input: RunReconciliationInput): Pro
 // the run row is immutable (enforced by a DB trigger, not just this
 // action).
 export async function approveReconciliationRun(runId: string, approvalNotes: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('collections.approve');
@@ -98,6 +109,11 @@ export async function approveReconciliationRun(runId: string, approvalNotes: str
 // investigation — a deliberate, audited action, not a byproduct of the
 // automated matching pass.
 export async function flagTransactionUnderReview(transactionId: string, notes: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('collections.reconcile');

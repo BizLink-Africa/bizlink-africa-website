@@ -2,8 +2,55 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { NAV_GROUPS } from '@/data/navigation';
 
 const MIGRATION_PATH = join(__dirname, '..', '..', '..', '..', '..', '..', 'supabase', 'migrations', '20260818000000_selcom_account_lookup.sql');
+
+// Merchant Beneficiaries exists to prepare/verify a payout destination for
+// BizLink-initiated disbursement — the confirmed operating model has each
+// merchant supply and maintain their own settlement instructions directly
+// with the approved payment partner, so this module is now an archived
+// financial prototype, Super Admin only. Only the "Settlement
+// Beneficiaries" item was removed from the Merchant Operations group — the
+// group itself still exists with its other items intact. See
+// navigation.ts and src/lib/archived-financial-prototype.ts.
+describe('Merchant Beneficiaries — archived financial prototype, nav item removed but Merchant Operations group remains', () => {
+  it('the Merchant Operations group still exists in NAV_GROUPS', () => {
+    const group = NAV_GROUPS.find((g) => g.label === 'Merchant Operations');
+    expect(group).toBeDefined();
+  });
+
+  it('"Settlement Beneficiaries" is no longer one of its items (stays caught if someone re-adds it without going through the archival process)', () => {
+    const group = NAV_GROUPS.find((g) => g.label === 'Merchant Operations');
+    const item = group?.items.find((i) => i.label === 'Settlement Beneficiaries' || i.href.includes('/beneficiaries'));
+    expect(item).toBeUndefined();
+  });
+
+  it('the Merchant Operations group still has its other items (nothing else was removed)', () => {
+    const group = NAV_GROUPS.find((g) => g.label === 'Merchant Operations');
+    const labels = (group?.items ?? []).map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining(['Merchant Applications', 'Merchant Profiles', 'KYC Coordination', 'Merchant Accounts/Tills'])
+    );
+  });
+
+  it("beneficiaries/layout.tsx wires up the archived-prototype access gate for the whole module", () => {
+    const source = readFileSync(join(__dirname, 'layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
+  });
+
+  it('page.tsx still requires merchant_beneficiaries.view, even though it is no longer linked from the sidebar', () => {
+    const source = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
+    expect(source).toContain(`requirePermission('merchant_beneficiaries.view')`);
+  });
+
+  it('[merchantId]/page.tsx still requires merchant_beneficiaries.view/.manage/.approve for their respective actions', () => {
+    const source = readFileSync(join(__dirname, '[merchantId]', 'page.tsx'), 'utf8');
+    expect(source).toContain(`requirePermission('merchant_beneficiaries.view')`);
+    expect(source).toContain(`requirePermission('merchant_beneficiaries.manage')`);
+    expect(source).toContain(`requirePermission('merchant_beneficiaries.approve')`);
+  });
+});
 
 // The exact, official code list confirmed against developer.selcom.business
 // ("Destination Shortcodes") — see the migration's own header comment.

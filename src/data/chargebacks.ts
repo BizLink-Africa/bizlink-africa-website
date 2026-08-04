@@ -48,8 +48,14 @@ export const CHARGEBACK_RECOVERY_STATUSES = [
   { value: 'unrecoverable', label: 'Unrecoverable' },
 ] as const;
 
+// 'settlement_deduction' was removed as a selectable recovery method:
+// BizLink Africa does not receive, hold, reconcile, disburse or settle
+// merchant funds, so there is no settlement to deduct a recovery from.
+// Historical records with that value are untouched and still display
+// correctly — see recordChargebackRecovery() in
+// src/app/admin/(protected)/chargebacks/actions.ts, which rejects any new
+// attempt to use it.
 export const CHARGEBACK_RECOVERY_METHODS = [
-  { value: 'settlement_deduction', label: 'Settlement Deduction' },
   { value: 'manual_invoice', label: 'Manual Invoice' },
   { value: 'other', label: 'Other' },
 ] as const;

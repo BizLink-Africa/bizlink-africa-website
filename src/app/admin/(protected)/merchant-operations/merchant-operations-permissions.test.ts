@@ -19,7 +19,7 @@ describe('Merchant Operations — sidebar permission matches page enforcement', 
     '/admin/merchant-operations/profiles': 'profiles/page.tsx',
     '/admin/merchant-operations/kyc': 'kyc/page.tsx',
     '/admin/merchant-operations/tills': 'tills/page.tsx',
-    '/admin/merchant-operations/beneficiaries': 'beneficiaries/page.tsx',
+    '/admin/integration-health/transactions': '../integration-health/transactions/page.tsx',
   };
 
   it('covers every Merchant Operations nav item (no route was added to the sidebar without an entry here)', () => {
@@ -48,5 +48,25 @@ describe('Merchant Operations — sidebar permission matches page enforcement', 
       expect(source).not.toContain(`requirePermission('roles.manage')`);
       expect(source).not.toContain(`requirePermission('users.manage')`);
     }
+  });
+
+  // "Settlement Beneficiaries" was removed from this group — merchant
+  // settlement beneficiary management is now an archived financial
+  // prototype (Super Admin only): the module exists to prepare/verify a
+  // payout destination for BizLink-initiated disbursement, and the
+  // confirmed operating model has each merchant supply and maintain their
+  // own settlement instructions directly with the approved payment
+  // partner. The route/page still exist and still independently enforce
+  // their original permission — see
+  // beneficiaries/lookup-permissions.test.ts for the full archival
+  // coverage (nav-item removal, layout gate, actions.ts guard).
+  it('beneficiaries/page.tsx (not in sidebar, but route still exists) requires merchant_beneficiaries.view', () => {
+    const source = readFileSync(join(__dirname, 'beneficiaries/page.tsx'), 'utf8');
+    expect(source).toContain(`requirePermission('merchant_beneficiaries.view')`);
+  });
+
+  it("beneficiaries/layout.tsx wires up the archived-prototype access gate", () => {
+    const source = readFileSync(join(__dirname, 'beneficiaries/layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
   });
 });

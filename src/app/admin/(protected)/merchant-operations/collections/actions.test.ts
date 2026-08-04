@@ -53,12 +53,13 @@ function makeSupabase() {
   }
 }
 
+const mockRpc = vi.fn();
 const mockCreateClient = vi.fn();
 vi.mock('@/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }));
 
-const { importSandboxStatement, importCollectionStatementCsv, requestManualAdjustment } = await import('./actions');
+const { importSandboxStatement, importCollectionStatementCsv, requestManualAdjustment, reviewManualAdjustment } = await import('./actions');
 
 function makeCsvFormData(csvText: string, filename = 'statement.csv'): FormData {
   const formData = new FormData();
@@ -70,99 +71,64 @@ beforeEach(() => {
   vi.clearAllMocks();
   insertCalls.length = 0;
   mockRequirePermission.mockResolvedValue({ email: 'ops@example.com' });
-  mockCreateClient.mockReturnValue(makeSupabase());
+  mockRpc.mockResolvedValue({ data: null, error: null });
+  mockCreateClient.mockReturnValue({ ...makeSupabase(), rpc: mockRpc });
 });
 
-describe('importSandboxStatement — sandbox mode, no live API involved', () => {
-  it('inserts sandbox rows as unmatched (not duplicate) when no existing reference is found', async () => {
-    const result = await importSandboxStatement('2026-08-01', '2026-08-01');
-
-    expect(result.success).toBe(true);
-    const txnInserts = insertCalls.filter((c) => c.table === 'collection_transactions');
-    expect(txnInserts).toHaveLength(2);
-    for (const call of txnInserts) {
-      expect(call.payload.reconciliation_status).toBe('unmatched');
-      expect(call.payload.duplicate_of_transaction_id).toBeNull();
-      // Money values are passed through as the original decimal string —
-      // never a JS number.
-      expect(typeof call.payload.gross_amount).toBe('string');
-    }
-  });
-
-  it('requires collections.manage permission', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+// Collection statement import, manual adjustment requests, and manual
+// adjustment review are all part of the archived financial prototype —
+// BizLink Africa does not receive, hold, reconcile, disburse or settle
+// merchant funds, so there is no collection ledger to import into or
+// adjust. Every exported action in ./actions.ts calls
+// assertArchivedFinancialPrototypeReadOnly() as its very first statement,
+// so every one of them must fail unconditionally, before ever reaching a
+// permission check, file/amount validation, or the insert/RPC layer —
+// regardless of what the caller's permissions are. See
+// src/app/admin/(protected)/chargebacks/actions.test.ts for the sibling
+// module this pattern was first applied to, and
+// src/lib/archived-financial-prototype.ts for the guard itself.
+describe('collection statement import and manual adjustments are an archived financial prototype — always blocked', () => {
+  it('importSandboxStatement is permanently read-only, even when the caller has permission', async () => {
     const result = await importSandboxStatement('2026-08-01', '2026-08-01');
     expect(result.success).toBe(false);
     expect(insertCalls.filter((c) => c.table === 'collection_transactions')).toHaveLength(0);
   });
-});
 
-describe('importCollectionStatementCsv — duplicate reference detection against existing ledger rows', () => {
-  it('flags a reference that already exists in the ledger as duplicate — never settlement-eligible, never dropped', async () => {
-    const csv = [
-      'provider_transaction_reference,gross_amount,collected_at',
-      'TXN-EXISTING-001,500.00,2026-08-01T09:00:00Z',
-    ].join('\n');
-
-    const result = await importCollectionStatementCsv(makeCsvFormData(csv));
-
-    expect(result.success).toBe(true);
-    expect(result.duplicates).toBe(1);
-    expect(result.imported).toBe(0);
-
-    const call = insertCalls.find((c) => c.table === 'collection_transactions');
-    expect(call?.payload).toMatchObject({
-      reconciliation_status: 'duplicate',
-      duplicate_of_transaction_id: 'existing-row-id',
-    });
-  });
-
-  it('imports a genuinely new reference as unmatched, not duplicate', async () => {
+  it('importCollectionStatementCsv is permanently read-only, even for a well-formed CSV', async () => {
     const csv = [
       'provider_transaction_reference,gross_amount,collected_at',
       'TXN-NEW-001,500.00,2026-08-01T09:00:00Z',
     ].join('\n');
-
     const result = await importCollectionStatementCsv(makeCsvFormData(csv));
-
-    expect(result.success).toBe(true);
-    expect(result.imported).toBe(1);
-    expect(result.duplicates).toBe(0);
-
-    const call = insertCalls.find((c) => c.table === 'collection_transactions');
-    expect(call?.payload).toMatchObject({ reconciliation_status: 'unmatched', duplicate_of_transaction_id: null });
-  });
-
-  it('rejects a non-CSV file', async () => {
-    const formData = new FormData();
-    formData.append('file', new File(['not a csv'], 'statement.txt', { type: 'text/plain' }));
-    const result = await importCollectionStatementCsv(formData);
     expect(result.success).toBe(false);
+    expect(insertCalls.filter((c) => c.table === 'collection_transactions')).toHaveLength(0);
   });
-});
 
-describe('requestManualAdjustment — validation never trusts unvalidated money input', () => {
-  it('rejects a malformed adjustment amount without inserting anything', async () => {
-    const result = await requestManualAdjustment('txn-1', 'not-a-number', 'Fee correction');
+  it('requestManualAdjustment is permanently read-only, even for a well-formed request', async () => {
+    const result = await requestManualAdjustment('txn-1', '-5.00', 'Duplicate fee charged by provider');
     expect(result.success).toBe(false);
     expect(insertCalls.filter((c) => c.table === 'collection_manual_adjustments')).toHaveLength(0);
   });
 
-  it('rejects a missing reason', async () => {
-    const result = await requestManualAdjustment('txn-1', '10.00', '');
-    expect(result.success).toBe(false);
+  it('reviewManualAdjustment is permanently read-only, for both approve and reject decisions', async () => {
+    const approveResult = await reviewManualAdjustment('adj-1', 'txn-1', 'approve', '');
+    const rejectResult = await reviewManualAdjustment('adj-1', 'txn-1', 'reject', 'not justified');
+    expect(approveResult.success).toBe(false);
+    expect(rejectResult.success).toBe(false);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it('accepts a valid negative adjustment with a reason and records it as pending approval', async () => {
-    const result = await requestManualAdjustment('txn-1', '-5.00', 'Duplicate fee charged by provider');
-    expect(result.success).toBe(true);
-    const call = insertCalls.find((c) => c.table === 'collection_manual_adjustments');
-    expect(call?.payload).toMatchObject({ transaction_id: 'txn-1', adjustment_amount: '-5.00' });
+  it('never reaches the permission check either — a caller with no permission at all gets the same archived message', async () => {
+    mockRequirePermission.mockRejectedValue(new Error('no'));
+    const result = await importSandboxStatement('2026-08-01', '2026-08-01');
+    expect(result.success).toBe(false);
+    expect(mockRequirePermission).not.toHaveBeenCalled();
   });
 
-  it('requires collections.manage permission', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await requestManualAdjustment('txn-1', '10.00', 'reason');
-    expect(result.success).toBe(false);
+  it('never logs an audit event, since no mutation ever occurs', async () => {
+    await importSandboxStatement('2026-08-01', '2026-08-01');
+    await requestManualAdjustment('txn-1', '10.00', 'reason');
+    await reviewManualAdjustment('adj-1', 'txn-1', 'approve', '');
+    expect(mockLogAuditEvent).not.toHaveBeenCalled();
   });
 });

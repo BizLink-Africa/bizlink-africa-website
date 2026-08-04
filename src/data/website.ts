@@ -20,7 +20,7 @@ export const COMPANY = {
 };
 
 export const COMPLIANCE_TEXT =
-  'BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners. Final merchant verification, payment processing and till or payment-account activation are subject to the requirements and approval of the applicable payment infrastructure partner.';
+  'BizLink Africa Limited provides ICT infrastructure, automation systems and payment-integration support through approved payment partners. Each merchant maintains their own payment account or wallet and manages settlement directly with the applicable payment partner. BizLink Africa does not receive, hold, control or settle merchant funds. Final merchant verification and till or payment-account activation are subject to the requirements and approval of the applicable payment partner.';
 
 export const SOLUTIONS = [
   {
@@ -52,13 +52,13 @@ export const SOLUTIONS = [
   {
     id: 'payment-integration',
     icon: 'CreditCard',
-    title: 'Merchant Payment Integration & Settlement Support',
+    title: 'Secure Payment Integration Support',
     description:
-      'BizLink Africa provides merchant onboarding coordination, payment-technology integration, transaction reconciliation and settlement-management services through approved payment infrastructure partners.',
+      'BizLink Africa provides merchant onboarding coordination and payment-technology integration through approved payment partners. Each merchant maintains their own payment account and receives settlement directly from the payment partner.',
     features: [
       'Merchant onboarding coordination',
-      'Payment-technology integration with approved infrastructure partners',
-      'Transaction reconciliation and settlement management',
+      'Payment-technology integration with approved payment partners',
+      'Direct merchant settlement — no BizLink custody of funds',
       'Final KYC and till/account activation subject to partner approval',
     ],
   },
@@ -170,10 +170,10 @@ export const SERVICE_CATEGORIES = [
     icon: 'CreditCard',
     items: [
       'Mobile Money Integration Support',
-      'Merchant Wallet Setup',
-      'Online Payment Gateway Connection',
+      'Merchant Wallet Setup Coordination',
+      'Payment Integration Support',
       'Invoice & Payment Link Generation',
-      'Transaction Reporting & Reconciliation',
+      'Provider-Neutral Integration Support',
     ],
   },
   {
@@ -204,26 +204,26 @@ export const ADVANTAGES = [
   { icon: 'MapPin', title: 'Built for Tanzania and East Africa', desc: 'Designed around local market realities, regulations, and infrastructure.' },
   { icon: 'Bot', title: 'AI-powered business automation', desc: 'Cutting-edge AI tools integrated into your existing business workflows.' },
   { icon: 'ShoppingCart', title: 'Social commerce ready', desc: 'Native support for WhatsApp, Instagram, and Facebook selling flows.' },
-  { icon: 'Shield', title: 'Secure payment integration support', desc: 'Connect to trusted fintech payment infrastructure with full compliance.' },
-  { icon: 'ArrowRightLeft', title: 'Reconciled settlement process', desc: 'We reconcile transactions and facilitate settlement to your verified merchant account according to agreed terms and schedules.' },
-  { icon: 'Users', title: 'Offline onboarding support', desc: 'Our team handles all verification and onboarding documents in person.' },
+  { icon: 'Shield', title: 'Secure payment integration support', desc: 'Connect to trusted, approved payment partners with full compliance.' },
+  { icon: 'ArrowRightLeft', title: 'Direct merchant settlement', desc: 'Each merchant maintains their own payment account and receives settlement directly from the approved payment partner — BizLink never holds or controls merchant funds.' },
+  { icon: 'Users', title: 'Secure offline onboarding', desc: 'Our team handles all verification and onboarding documents in person.' },
 ];
 
 export const PARTNERSHIP_FEATURES = [
   {
     icon: 'Wallet',
     title: 'Merchant Onboarding Coordination',
-    desc: 'We coordinate merchant onboarding; final verification and merchant till or account activation are completed by the approved payment infrastructure partner.',
+    desc: 'We coordinate secure offline merchant onboarding; final verification and merchant till or account activation are completed by the approved payment partner.',
   },
   {
     icon: 'ShieldCheck',
-    title: 'Controlled Merchant Settlement',
-    desc: 'BizLink Africa reconciles eligible merchant collections and facilitates settlement to verified merchant accounts according to agreed terms, schedules and compliance requirements.',
+    title: 'Direct Merchant Settlement',
+    desc: 'Each merchant maintains their own payment account or wallet and receives settlement directly from the approved payment partner. BizLink Africa does not receive, hold, control or settle merchant funds.',
   },
   {
     icon: 'Building2',
-    title: 'Approved Payment Infrastructure',
-    desc: 'Merchant transactions are processed through approved, regulated payment infrastructure partners, with confidential commercial arrangements and audit-ready operational processes.',
+    title: 'Provider-Neutral Integration Support',
+    desc: 'BizLink Africa integrates with approved, regulated payment partners on a provider-neutral basis, with confidential commercial arrangements and audit-ready operational processes.',
   },
 ];
 
@@ -258,7 +258,7 @@ export const CLIENT_PORTAL_SECTIONS = [
   { icon: 'BarChart3', title: 'Overview Analytics', desc: 'Real-time performance metrics and business insights.' },
   { icon: 'Bot', title: 'AI Agent Configuration', desc: 'Configure and monitor your AI sales and care agents.' },
   { icon: 'ShoppingBag', title: 'Social Commerce Status', desc: 'Track social channel integrations and order activity.' },
-  { icon: 'Activity', title: 'Payment Gateway Health', desc: 'Monitor integration uptime and transaction logs.' },
+  { icon: 'Activity', title: 'Payment Integration Health', desc: 'Monitor integration uptime and transaction logs.' },
   { icon: 'Ticket', title: 'Support Ticketing', desc: 'Submit and track support requests with the BizLink team.' },
   { icon: 'Building2', title: 'Business Profile', desc: 'Manage your company details and onboarding status.' },
   { icon: 'Bell', title: 'Notifications', desc: 'Stay updated on system alerts, updates, and announcements.' },

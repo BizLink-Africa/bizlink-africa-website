@@ -4,51 +4,44 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NAV_GROUPS } from '@/data/navigation';
 
-describe('Financial Reports — sidebar permission matches page enforcement', () => {
-  const group = NAV_GROUPS.find((g) => g.label === 'Financial Reports');
-  if (!group) throw new Error('Financial Reports group not found in navigation.ts');
-
-  const routeToPageFile: Record<string, string> = {
-    '/admin/financial-reports/daily-collections': 'daily-collections/page.tsx',
-    '/admin/financial-reports/daily-reconciliation': 'daily-reconciliation/page.tsx',
-    '/admin/financial-reports/merchant-settlement': 'merchant-settlement/page.tsx',
-    '/admin/financial-reports/commission-revenue': 'commission-revenue/page.tsx',
-    '/admin/financial-reports/outstanding-liabilities': 'outstanding-liabilities/page.tsx',
-    '/admin/financial-reports/failed-payouts': 'failed-payouts/page.tsx',
-    '/admin/financial-reports/chargebacks-reversals': 'chargebacks-reversals/page.tsx',
-    '/admin/financial-reports/statements': 'statements/page.tsx',
-    '/admin/financial-reports/audit-trail': 'audit-trail/page.tsx',
-  };
-
-  it('covers every Financial Reports nav item', () => {
-    for (const item of group.items) {
-      expect(routeToPageFile[item.href], `no known page file mapped for ${item.href}`).toBeDefined();
-    }
-    expect(Object.keys(routeToPageFile)).toHaveLength(group.items.length);
+// Financial Reports modeled BizLink as the party generating merchant
+// settlement/commission/payout reporting on funds it held. BizLink Africa
+// does not receive, hold, reconcile, disburse or settle merchant funds, so
+// this group was removed from active navigation and its routes are now
+// gated Super Admin only behind the archived-financial-prototype layout —
+// see navigation.ts and src/lib/archived-financial-prototype.ts. Nothing
+// was deleted: every page.tsx and export route still independently
+// enforces financial_reports.view, and the underlying DB grants (e.g. cfo
+// holding financial_reports.view) were never revoked.
+describe('Financial Reports — dissolved group, routes archived and Super-Admin gated', () => {
+  it('is no longer present in NAV_GROUPS (stays caught if someone re-adds it without going through the archival process)', () => {
+    const group = NAV_GROUPS.find((g) => g.label === 'Financial Reports');
+    expect(group).toBeUndefined();
   });
 
-  // "All Reports" (index), "Settlement Holds" (now under Settlement &
-  // Payouts), "Beneficiary Changes" (now under Risk & Compliance) and
-  // "Merchant KYC Status" are no longer sidebar entries here, but every
-  // route/page still exists and must keep independently enforcing
-  // financial_reports.view.
-  const droppedFromNavButStillEnforced = [
+  // Every page that used to be a sidebar item, plus the ones that were
+  // already dropped from nav before this (index, settlement-holds,
+  // beneficiary-changes, merchant-kyc-status) — all must still
+  // independently enforce financial_reports.view.
+  const pageFiles = [
     'page.tsx',
+    'daily-collections/page.tsx',
+    'daily-reconciliation/page.tsx',
+    'merchant-settlement/page.tsx',
+    'commission-revenue/page.tsx',
+    'outstanding-liabilities/page.tsx',
+    'failed-payouts/page.tsx',
+    'chargebacks-reversals/page.tsx',
+    'statements/page.tsx',
+    'audit-trail/page.tsx',
     'settlement-holds/page.tsx',
     'beneficiary-changes/page.tsx',
     'merchant-kyc-status/page.tsx',
   ];
-  for (const relativePath of droppedFromNavButStillEnforced) {
-    it(`${relativePath} (not in sidebar, but route still exists) requires 'financial_reports.view'`, () => {
+  for (const relativePath of pageFiles) {
+    it(`${relativePath} still requires 'financial_reports.view', even though the module is no longer linked from the sidebar`, () => {
       const source = readFileSync(join(__dirname, relativePath), 'utf8');
       expect(source).toContain(`requirePermission('financial_reports.view')`);
-    });
-  }
-
-  for (const item of group.items) {
-    it(`${item.label} (${item.href}) page.tsx requires '${item.permission}'`, () => {
-      const source = readFileSync(join(__dirname, routeToPageFile[item.href]), 'utf8');
-      expect(source).toContain(`requirePermission('${item.permission}')`);
     });
   }
 
@@ -67,12 +60,17 @@ describe('Financial Reports — sidebar permission matches page enforcement', ()
     'audit-trail/export/route.ts',
   ];
 
-  it('every export route requires financial_reports.view and logs an audit event ("log every export")', () => {
+  it('every export route still requires financial_reports.view and logs an audit event ("log every export")', () => {
     for (const relativePath of exportRoutes) {
       const source = readFileSync(join(__dirname, relativePath), 'utf8');
       expect(source, `${relativePath} missing permission check`).toContain(`requirePermission('financial_reports.view')`);
       expect(source, `${relativePath} missing audit log call`).toContain('logAuditEvent(');
     }
+  });
+
+  it('layout.tsx wires up the archived-prototype access gate (Super Admin only)', () => {
+    const source = readFileSync(join(__dirname, 'layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
   });
 
   it('is only ever granted to super_admin and cfo in the migration ("Super Admin and authorised Finance roles")', () => {

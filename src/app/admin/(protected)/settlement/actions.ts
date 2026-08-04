@@ -7,6 +7,7 @@ import { hasRecentReauth, SETTLEMENT_EMERGENCY_REAUTH_PURPOSE } from '@/lib/supa
 import { logAuditEvent } from '@/lib/audit';
 import { SandboxPayoutAdapter } from '@/lib/settlement/payout-adapter';
 import { refreshSelcomBalance } from '@/lib/selcom/balance-service';
+import { assertMerchantSettlementsNotBizLinkManaged } from '@/lib/archived-financial-prototype';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -22,6 +23,11 @@ interface ActionResult {
 // checks server-side inside prepare_settlement_batch() — nothing about
 // eligibility is decided or trusted from the client.
 export async function prepareSettlementBatch(settlementDate: string, merchantId: string | null): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.prepare');
@@ -56,6 +62,11 @@ export async function prepareSettlementBatch(settlementDate: string, merchantId:
 }
 
 export async function submitSettlementBatchForReview(batchId: string, varianceResolutionNotes: string | null): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.prepare');
@@ -88,6 +99,11 @@ export async function submitSettlementBatchForReview(batchId: string, varianceRe
 }
 
 export async function reviewSettlementBatch(batchId: string, reviewNotes: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.review');
@@ -120,6 +136,11 @@ export async function reviewSettlementBatch(batchId: string, reviewNotes: string
 }
 
 export async function rejectSettlementBatch(batchId: string, rejectionReason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.review');
@@ -164,6 +185,11 @@ export async function rejectSettlementBatch(batchId: string, rejectionReason: st
 // check is always recorded here (trigger_type = 'batch_approval'),
 // whether or not the approval itself goes on to succeed.
 export async function approveSettlementBatch(batchId: string, approvalNotes: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.approve');
@@ -211,6 +237,11 @@ export async function approveSettlementBatch(batchId: string, approvalNotes: str
 }
 
 export async function placeSettlementBatchHold(batchId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.compliance_hold');
@@ -243,6 +274,11 @@ export async function placeSettlementBatchHold(batchId: string, reason: string):
 }
 
 export async function releaseSettlementBatchHold(batchId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.compliance_hold');
@@ -272,6 +308,11 @@ export async function releaseSettlementBatchHold(batchId: string, notes: string)
 }
 
 export async function emergencyCancelSettlementBatch(batchId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.emergency');
@@ -312,6 +353,11 @@ export async function emergencyCancelSettlementBatch(batchId: string, reason: st
 // — recording each outcome via apply_settlement_line_payout_result(),
 // which is also the only place the batch's final status is derived.
 export async function processSettlementBatch(batchId: string): Promise<ActionResult> {
+  try {
+    await assertMerchantSettlementsNotBizLinkManaged();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('settlement.process');

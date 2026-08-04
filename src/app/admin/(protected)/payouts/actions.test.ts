@@ -97,6 +97,7 @@ const {
   submitPayout,
   retryPayout,
   placePayoutHold,
+  releasePayoutHold,
   reversePayout,
   checkPayoutProviderStatus,
 } = await import('./actions');
@@ -129,265 +130,107 @@ beforeEach(() => {
   });
 });
 
-describe('permission gating — every mutating action requires server-side permission', () => {
-  it('createPayoutsForBatch requires payouts.manage', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await createPayoutsForBatch('batch-1');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
+// Merchant payouts are not handled by BizLink Africa — settlement happens
+// directly between each merchant and their approved payment partner.
+// BizLink Africa does not manage merchant settlement (see
+// BIZLINK_MANAGES_MERCHANT_SETTLEMENTS in
+// src/lib/archived-financial-prototype.ts). Every payout-creation/approval/
+// submission/retry/cancellation/hold/reversal action in ./actions.ts calls
+// assertMerchantSettlementsNotBizLinkManaged() as its very first statement,
+// so every one of them must fail unconditionally, before ever reaching a
+// permission check, a re-authentication check, or the RPC/Selcom layer —
+// regardless of what the caller's permissions or re-auth state are. This
+// also means the old "blocked without a recent re-auth" tests no longer
+// make sense as written: the failure a caller now sees is always the
+// merchant-payouts-not-handled message, never the re-auth prompt, because
+// the guard fires first. checkPayoutProviderStatus is the one exception —
+// see the dedicated describe block below — it's a read-only technical
+// status check with no fund-movement effect, and is deliberately NOT
+// gated by this guard (preserved non-financial integration support).
+// See src/app/admin/(protected)/chargebacks/actions.test.ts for the
+// sibling module this pattern was first applied to, and
+// src/lib/archived-financial-prototype.ts for the guard itself.
+describe('payouts are not handled by BizLink Africa — money-movement actions always blocked', () => {
+  const cases: [string, () => Promise<{ success: boolean; message?: string }>][] = [
+    ['createPayoutsForBatch', () => createPayoutsForBatch('batch-1')],
+    ['approvePayout', () => approvePayout('payout-1')],
+    ['cancelPayout', () => cancelPayout('payout-1', 'a reason')],
+    ['submitPayout', () => submitPayout('payout-1')],
+    ['retryPayout', () => retryPayout('payout-1')],
+    ['placePayoutHold', () => placePayoutHold('payout-1', 'a reason')],
+    ['releasePayoutHold', () => releasePayoutHold('payout-1', '')],
+    ['reversePayout', () => reversePayout('payout-1', 'a reason')],
+  ];
 
-  it('approvePayout requires payouts.approve', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+  for (const [name, action] of cases) {
+    it(`${name} is permanently blocked, even when the caller has permission and a fresh re-auth`, async () => {
+      const result = await action();
+      expect(result.success).toBe(false);
+      expect(result.message).toBe(
+        'Merchant payouts are not handled by BizLink Africa. Settlement is managed directly by each merchant through the approved payment partner.'
+      );
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(mockInitiateDisbursement).not.toHaveBeenCalled();
+      expect(mockLogAuditEvent).not.toHaveBeenCalled();
+    });
+  }
+
+  it('never reaches the permission check either — a caller with no permission at all gets the same blocked message', async () => {
+    mockRequirePermission.mockRejectedValue(new Error('no'));
     const result = await approvePayout('payout-1');
     expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockRequirePermission).not.toHaveBeenCalled();
   });
 
-  it('cancelPayout requires payouts.manage', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await cancelPayout('payout-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
+  it('is blocked regardless of re-auth state — approvePayout fails the same way whether or not hasRecentReauth would have passed', async () => {
+    mockHasRecentReauth.mockResolvedValueOnce(false);
+    const resultWithoutReauth = await approvePayout('payout-1');
+    mockHasRecentReauth.mockResolvedValueOnce(true);
+    const resultWithReauth = await approvePayout('payout-1');
+    expect(resultWithoutReauth.success).toBe(false);
+    expect(resultWithReauth.success).toBe(false);
+    expect(mockHasRecentReauth).not.toHaveBeenCalled();
   });
 
-  it('submitPayout requires payouts.submit', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+  it('submitPayout never checks the Selcom integration kill switch, balance, or calls Selcom at all — no live payout can be submitted', async () => {
     const result = await submitPayout('payout-1');
     expect(result.success).toBe(false);
-    expect(mockInitiateDisbursement).not.toHaveBeenCalled();
-  });
-
-  it('retryPayout requires payouts.manage', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await retryPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('placePayoutHold requires payouts.hold', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await placePayoutHold('payout-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('reversePayout requires payouts.approve', async () => {
-    mockRequirePermission.mockRejectedValueOnce(new Error('no'));
-    const result = await reversePayout('payout-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-});
-
-describe('re-authentication gating — real money movement cannot proceed on a stale session', () => {
-  it('approvePayout is blocked without a recent re-auth', async () => {
-    mockHasRecentReauth.mockResolvedValueOnce(false);
-    const result = await approvePayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/re-confirm your password/i);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('submitPayout is blocked without a recent re-auth, before ever calling Selcom', async () => {
-    mockHasRecentReauth.mockResolvedValueOnce(false);
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/sandbox/i);
-    expect(mockInitiateDisbursement).not.toHaveBeenCalled();
     expect(mockGetAccountBalance).not.toHaveBeenCalled();
+    expect(mockInitiateDisbursement).not.toHaveBeenCalled();
+    expect(mockQueryTransactionStatus).not.toHaveBeenCalled();
   });
 
-  it('reversePayout is blocked without a recent re-auth', async () => {
-    mockHasRecentReauth.mockResolvedValueOnce(false);
-    const result = await reversePayout('payout-1', 'a reason');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('checks the payout-specific reauth purpose, not the beneficiary one', async () => {
-    await approvePayout('payout-1');
-    expect(mockHasRecentReauth).toHaveBeenCalledWith('payout_approval');
-  });
-});
-
-describe('reason-required validations', () => {
-  it('cancelPayout rejects an empty reason before calling the RPC', async () => {
-    const result = await cancelPayout('payout-1', '   ');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('placePayoutHold rejects an empty reason before calling the RPC', async () => {
-    const result = await placePayoutHold('payout-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('reversePayout rejects an empty reason before calling the RPC', async () => {
-    const result = await reversePayout('payout-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
+  it('direct invocation (bypassing any UI) is rejected identically — these are the actual server actions, there is no separate "API route" to go around', async () => {
+    // Every action above is called directly here, exactly as a client
+    // component (or any other direct caller, e.g. a crafted request to the
+    // Next.js server-action endpoint) would invoke it. There is no code
+    // path that reaches the RPC/Selcom layer.
+    const results = await Promise.all(cases.map(([, action]) => action()));
+    expect(results.every((r) => r.success === false)).toBe(true);
   });
 });
 
-describe('server-side error surfacing — every checklist violation from the DB is surfaced, never swallowed', () => {
-  it('surfaces the retry-ceiling message from retry_merchant_payout', async () => {
-    mockRpc.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: 'This payout has already reached the maximum of 3 retries' } }));
-    const result = await retryPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('maximum of 3 retries');
-  });
-
-  it('surfaces a maker-checker violation from approve_merchant_payout', async () => {
-    mockRpc.mockImplementationOnce(() => Promise.resolve({ data: null, error: { message: 'Maker-checker violation: the approver must be different from the requester' } }));
-    const result = await approvePayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Maker-checker violation');
-  });
-
-  it('audit-logs a successful approval, never logging a raw beneficiary value', async () => {
-    const result = await approvePayout('payout-1');
+// checkPayoutProviderStatus is deliberately NOT gated by
+// assertMerchantSettlementsNotBizLinkManaged() — it's a read-only technical
+// status check (never creates, approves, or moves a payout) and is
+// explicitly preserved non-financial integration support, distinct from
+// the money-movement actions above.
+describe('checkPayoutProviderStatus — preserved read-only transaction-status viewing', () => {
+  it('is not blocked by the merchant-settlements guard and still reaches Selcom\'s status-query endpoint', async () => {
+    const result = await checkPayoutProviderStatus('payout-1');
     expect(result.success).toBe(true);
-    expect(mockLogAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ actionType: 'approve', module: 'merchant_payouts', recordId: 'payout-1' })
-    );
-    const call = mockLogAuditEvent.mock.calls[0][0];
-    expect(JSON.stringify(call)).not.toMatch(/\d{6,}/); // no long raw digit sequences (account/wallet numbers)
+    expect(mockQueryTransactionStatus).toHaveBeenCalledWith({ transId: 'PAY-2026-0001' });
   });
 
-  it('surfaces a duplicate-transId unique-constraint violation from create_merchant_payouts_for_batch', async () => {
-    mockRpc.mockImplementationOnce(() =>
-      Promise.resolve({ data: null, error: { message: 'duplicate key value violates unique constraint "merchant_payouts_payout_reference_key"' } })
-    );
-    const result = await createPayoutsForBatch('batch-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/payout_reference/i);
-  });
-
-  it('surfaces a duplicate-idempotency-key unique-constraint violation from create_merchant_payouts_for_batch', async () => {
-    mockRpc.mockImplementationOnce(() =>
-      Promise.resolve({ data: null, error: { message: 'duplicate key value violates unique constraint "merchant_payouts_idempotency_key_key"' } })
-    );
-    const result = await createPayoutsForBatch('batch-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/idempotency_key/i);
-  });
-
-  it('surfaces begin_merchant_payout_submission checklist failures (e.g. unverified beneficiary) without calling Selcom', async () => {
-    mockRpc.mockImplementation((fnName: string) => {
-      if (fnName === 'begin_merchant_payout_submission') {
-        return Promise.resolve({ data: null, error: { message: "This payout's beneficiary is not currently verified and cannot be submitted" } });
-      }
-      return defaultRpcImpl(fnName);
-    });
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/not currently verified/i);
-    expect(mockInitiateDisbursement).not.toHaveBeenCalled();
-  });
-});
-
-describe('submitPayout — real Selcom sandbox integration, orchestration', () => {
-  it('checks the Selcom integration kill switch before doing anything else', async () => {
-    mockCreateClient.mockReturnValue({
-      rpc: mockRpc,
-      from: (table: string) => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: () =>
-              Promise.resolve(table === 'selcom_integration_settings' ? { data: { integration_enabled: false }, error: null } : { data: null, error: null }),
-          }),
-        }),
-      }),
-    });
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/disabled/i);
+  it('never calls initiateDisbursement or any other fund-movement path', async () => {
+    await checkPayoutProviderStatus('payout-1');
     expect(mockInitiateDisbursement).not.toHaveBeenCalled();
   });
 
-  it('checks balance, begins submission, decrypts the destination, submits once, and applies the result', async () => {
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(true);
-    expect(mockGetAccountBalance).toHaveBeenCalledTimes(1);
-    expect(mockInitiateDisbursement).toHaveBeenCalledTimes(1);
-
-    const rpcCalls = mockRpc.mock.calls.map((c) => c[0]);
-    expect(rpcCalls).toContain('begin_merchant_payout_submission');
-    expect(rpcCalls).toContain('decrypt_beneficiary_destination_for_payout');
-    expect(rpcCalls).toContain('apply_merchant_payout_result');
-  });
-
-  it('sends purpose FT and the beneficiary institution code, never an invented debit-account field', async () => {
-    await submitPayout('payout-1');
-    const call = mockInitiateDisbursement.mock.calls[0][0];
-    expect(call.purpose).toBe('FT');
-    expect(call.recipientFiCode).toBe('CRDB');
-    expect(call.transId).toBe('PAY-2026-0001');
-    expect(call).not.toHaveProperty('senderAccount');
-    expect(call).not.toHaveProperty('debitAccount');
-  });
-
-  it('never includes the raw decrypted account number in the audit log or the action return value', async () => {
-    const result = await submitPayout('payout-1');
-    expect(JSON.stringify(result)).not.toContain('255700000000');
-    for (const call of mockLogAuditEvent.mock.calls) {
-      expect(JSON.stringify(call[0])).not.toContain('255700000000');
-    }
-  });
-
-  it('insufficient available balance blocks submission before Selcom is ever called', async () => {
-    mockGetAccountBalance.mockResolvedValueOnce({
-      data: { accountNumber: '000', currency: 'TZS', availableBalance: 100, active: true },
-      correlationId: 'c',
-      result: 'SUCCESS',
-      resultCode: '000',
-    });
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(false);
-    expect(result.message).toMatch(/insufficient/i);
-    expect(mockInitiateDisbursement).not.toHaveBeenCalled();
-  });
-
-  it('a Selcom ACCEPTED response leaves the payout processing, never marked successful', async () => {
-    mockInitiateDisbursement.mockResolvedValueOnce({
-      data: { trans_id: 'PAY-2026-0001', selcom_receipt: 'RCPT-1', status: 'ACCEPTED', amount: 97000, currency: 'TZS' },
-      result: 'SUCCESS',
-      resultCode: '000',
-      correlationId: 'c',
-    });
-    await submitPayout('payout-1');
-    const applyCall = mockRpc.mock.calls.find((c) => c[0] === 'apply_merchant_payout_result');
-    expect(applyCall?.[1]).toMatchObject({ p_status: 'processing' });
-  });
-
-  it('a Selcom COMPLETED response marks the payout successful', async () => {
-    mockInitiateDisbursement.mockResolvedValueOnce({
-      data: { trans_id: 'PAY-2026-0001', selcom_receipt: 'RCPT-1', status: 'COMPLETED', amount: 97000, currency: 'TZS' },
-      result: 'SUCCESS',
-      resultCode: '000',
-      correlationId: 'c',
-    });
-    await submitPayout('payout-1');
-    const applyCall = mockRpc.mock.calls.find((c) => c[0] === 'apply_merchant_payout_result');
-    expect(applyCall?.[1]).toMatchObject({ p_status: 'successful' });
-  });
-
-  it('a network timeout calling Selcom is recorded as a failed result, never thrown, never silently retried', async () => {
-    mockInitiateDisbursement.mockRejectedValueOnce(new Error('Selcom request to /v1/transaction/process timed out after 15000ms'));
-    const result = await submitPayout('payout-1');
-    expect(result.success).toBe(true); // the ACTION succeeds — it always applies *some* result
-    expect(mockInitiateDisbursement).toHaveBeenCalledTimes(1); // never retried automatically
-    const applyCall = mockRpc.mock.calls.find((c) => c[0] === 'apply_merchant_payout_result');
-    expect(applyCall?.[1]).toMatchObject({ p_status: 'failed' });
-  });
-});
-
-describe('checkPayoutProviderStatus — requires payouts.view, syncs a confirmed result', () => {
-  it('requires payouts.view', async () => {
+  it('still enforces payouts.view permission', async () => {
     mockRequirePermission.mockRejectedValueOnce(new Error('no'));
     const result = await checkPayoutProviderStatus('payout-1');
     expect(result.success).toBe(false);
+    expect(mockQueryTransactionStatus).not.toHaveBeenCalled();
   });
 });

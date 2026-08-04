@@ -54,8 +54,26 @@ beforeEach(() => {
   mockCreateClient.mockReturnValue(makeSupabase());
 });
 
-describe('permission gating', () => {
-  const cases: [string, () => Promise<{ success: boolean }>][] = [
+// The entire Chargebacks & Holds module (cases, evidence, resolution,
+// recovery, settlement holds, and manual reversals) is an archived
+// financial prototype. Opening a new chargeback case fundamentally depends
+// on collection_transactions — BizLink's own record of merchant
+// collections — which is itself archived, since BizLink Africa does not
+// receive, hold, reconcile, disburse or settle merchant funds. Manual
+// reversals write directly against that same archived collection ledger.
+// Every exported action in ./actions.ts calls
+// assertArchivedFinancialPrototypeReadOnly() as its very first statement
+// (see src/lib/archived-financial-prototype.ts), so every one of them must
+// fail unconditionally, before ever reaching a permission check,
+// re-authentication, validation, or the RPC/upsert/DB layer — regardless
+// of what the caller's permissions are. See
+// src/app/admin/(protected)/settlement/actions.test.ts for the sibling
+// module this pattern was first applied to.
+describe('chargebacks & holds are an archived financial prototype — always blocked', () => {
+  const ARCHIVED_MESSAGE =
+    'This module is archived and permanently read-only. BizLink Africa does not handle merchant funds or settlements.';
+
+  const cases: [string, () => Promise<{ success: boolean; message?: string }>][] = [
     ['openChargebackCase', () => openChargebackCase('txn-1', '1000.00', '0', 'fraud', null)],
     ['requestChargebackEvidence', () => requestChargebackEvidence('case-1', null)],
     ['submitChargebackEvidence', () => submitChargebackEvidence('case-1')],
@@ -63,7 +81,7 @@ describe('permission gating', () => {
     ['beginChargebackReview', () => beginChargebackReview('case-1')],
     ['resolveChargebackCase', () => resolveChargebackCase('case-1', 'lost', 'ruling received')],
     ['closeChargebackCase', () => closeChargebackCase('case-1', '')],
-    ['recordChargebackRecovery', () => recordChargebackRecovery('case-1', '500.00', 'settlement_deduction', '')],
+    ['recordChargebackRecovery', () => recordChargebackRecovery('case-1', '500.00', 'manual_invoice', '')],
     ['placeSettlementHold', () => placeSettlementHold('merchant-1', null, null, 'suspected fraud', '0', null)],
     ['requestSettlementHoldRelease', () => requestSettlementHoldRelease('hold-1', 'cleared')],
     ['approveSettlementHoldRelease', () => approveSettlementHoldRelease('hold-1', '')],
@@ -74,96 +92,33 @@ describe('permission gating', () => {
   ];
 
   for (const [name, action] of cases) {
-    it(`${name} requires the caller to hold the relevant permission`, async () => {
-      mockRequirePermission.mockRejectedValueOnce(new Error('no'));
+    it(`${name} is permanently blocked, even when the caller has permission`, async () => {
       const result = await action();
       expect(result.success).toBe(false);
+      expect(result.message).toBe(ARCHIVED_MESSAGE);
       expect(mockRpc).not.toHaveBeenCalled();
       expect(mockUpsert).not.toHaveBeenCalled();
+      expect(mockLogAuditEvent).not.toHaveBeenCalled();
     });
   }
-});
 
-describe('input validation — money shape and required reasons never reach the RPC malformed', () => {
-  it('openChargebackCase rejects an invalid disputed amount', async () => {
+  it('never reaches the permission check either — a caller with no permission at all gets the same archived message', async () => {
+    mockRequirePermission.mockRejectedValue(new Error('no'));
+    const result = await openChargebackCase('txn-1', '1000.00', '0', 'fraud', null);
+    expect(result.success).toBe(false);
+    expect(result.message).toBe(ARCHIVED_MESSAGE);
+    expect(mockRequirePermission).not.toHaveBeenCalled();
+  });
+
+  it('recordChargebackRecovery never reaches the settlement_deduction validation — the archived guard fires first', async () => {
+    const result = await recordChargebackRecovery('case-1', '500.00', 'settlement_deduction', '');
+    expect(result.success).toBe(false);
+    expect(result.message).toBe(ARCHIVED_MESSAGE);
+  });
+
+  it('openChargebackCase never reaches money-format validation — the archived guard fires first', async () => {
     const result = await openChargebackCase('txn-1', 'not-a-number', '0', 'fraud', null);
     expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('recordChargebackRecovery rejects an invalid amount', async () => {
-    const result = await recordChargebackRecovery('case-1', 'abc', 'settlement_deduction', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('placeSettlementHold rejects an empty reason', async () => {
-    const result = await placeSettlementHold('merchant-1', null, null, '   ', '0', null);
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('requestSettlementHoldRelease rejects an empty reason', async () => {
-    const result = await requestSettlementHoldRelease('hold-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('rejectManualReversal requires a reason', async () => {
-    const result = await rejectManualReversal('req-1', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('resolveChargebackCase requires resolution notes', async () => {
-    const result = await resolveChargebackCase('case-1', 'won', '');
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('requestManualReversal rejects an invalid amount', async () => {
-    const result = await requestManualReversal('txn-1', 'nope', 'reason', null);
-    expect(result.success).toBe(false);
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-});
-
-describe('server-side error surfacing and audit logging', () => {
-  it('surfaces a maker-checker violation from approve_settlement_hold_release', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'Maker-checker violation: the approver must be different from whoever requested the release' } });
-    const result = await approveSettlementHoldRelease('hold-1', 'ok');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Maker-checker violation');
-  });
-
-  it('surfaces the "held amounts cannot be settled" style rejection from the RPC layer verbatim', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'A payout can only be cancelled before it has been submitted' } });
-    const result = await placeSettlementHold('merchant-1', null, null, 'test', '0', null);
-    expect(result.success).toBe(false);
-  });
-
-  it('recordChargebackRecovery always calls logAuditEvent — "recovery entries require audit logs"', async () => {
-    const result = await recordChargebackRecovery('case-1', '500.00', 'settlement_deduction', 'partial recovery');
-    expect(result.success).toBe(true);
-    expect(mockLogAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ actionType: 'record_recovery', module: 'chargeback_cases', recordId: 'case-1' })
-    );
-  });
-
-  it('approveManualReversal audit-logs the approval', async () => {
-    const result = await approveManualReversal('req-1', 'confirmed');
-    expect(result.success).toBe(true);
-    expect(mockLogAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ actionType: 'approve_reversal', module: 'manual_reversal_requests', recordId: 'req-1' })
-    );
-  });
-
-  it('openChargebackCase audit-logs opening the case with the returned id', async () => {
-    const result = await openChargebackCase('txn-1', '1000.00', '0', 'fraud', null);
-    expect(result.success).toBe(true);
-    expect(result.id).toBe('new-id');
-    expect(mockLogAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ actionType: 'open_case', module: 'chargeback_cases', recordId: 'new-id' })
-    );
+    expect(result.message).toBe(ARCHIVED_MESSAGE);
   });
 });

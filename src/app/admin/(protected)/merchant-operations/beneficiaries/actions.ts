@@ -7,6 +7,7 @@ import { hasRecentReauth } from '@/lib/supabase/reauth';
 import { logAuditEvent } from '@/lib/audit';
 import { maskCredential } from '@/lib/security/mask';
 import { sendEmail } from '@/lib/email/resend';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 const REAUTH_REQUIRED_MESSAGE = 'Please re-authenticate to continue — this action requires a recent password confirmation.';
 const COOLING_PERIOD_HOURS = 48;
@@ -41,6 +42,11 @@ export interface BeneficiaryChangeRequestInput {
 // log, never returned to the caller, and this action's own return value
 // never echoes it back either.
 export async function requestBeneficiaryChange(input: BeneficiaryChangeRequestInput): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('merchant_beneficiaries.manage');
@@ -133,6 +139,11 @@ export async function approveBeneficiaryChangeRequest(
   requestType: string,
   reviewNotes?: string
 ): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('merchant_beneficiaries.approve');
@@ -184,6 +195,11 @@ export async function rejectBeneficiaryChangeRequest(
   merchantId: string,
   reviewNotes: string
 ): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('merchant_beneficiaries.approve');

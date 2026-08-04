@@ -3,8 +3,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { verifyAdminSession } from '@/lib/supabase/dal';
 import { REAUTH_PURPOSE, REAUTH_TTL_MINUTES } from '@/lib/supabase/reauth';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 export async function reauthenticateForBeneficiaries(password: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   const user = await verifyAdminSession();
   if (!user.email) {
     return { success: false, message: 'Unable to verify your account email.' };

@@ -19,13 +19,13 @@ const ICONS: Record<string, React.ComponentType<{ size?: number; className?: str
 const DEMO_STATS = [
   { label: 'AI Conversations', value: '3,847', change: '+12% this week', up: true },
   { label: 'Orders Processed', value: '1,204', change: '+8% this week', up: true },
-  { label: 'Gateway Status', value: 'Active', change: '99.9% uptime', up: true },
+  { label: 'Integration Status', value: 'Active', change: '99.9% uptime', up: true },
   { label: 'Open Tickets', value: '2', change: '1 resolved today', up: false },
 ];
 
 const DEMO_ACTIVITY = [
   { time: '10:42 AM', event: 'AI agent responded to 14 WhatsApp inquiries', type: 'bot', location: 'Kariakoo, DSM' },
-  { time: '09:15 AM', event: 'Payment of TZS 450,000 collected and reconciled', type: 'payment', location: 'Merchant settlement' },
+  { time: '09:15 AM', event: 'Payment of TZS 450,000 received directly into merchant account', type: 'payment', location: 'Direct settlement' },
   { time: '08:50 AM', event: 'New order received from Instagram — Kitenge ya Maasai', type: 'order', location: 'Mwenge, DSM' },
   { time: 'Yesterday', event: 'Support ticket #TZ-0041 resolved — API integration query', type: 'ticket', location: 'Resolved' },
   { time: 'Yesterday', event: 'Social commerce workflow processed 38 orders', type: 'order', location: 'WhatsApp + Facebook' },
@@ -34,7 +34,7 @@ const DEMO_ACTIVITY = [
 const DEMO_SERVICES = [
   { name: 'AI Sales Agent', status: 'Active', color: 'bg-[#afefdd] text-[#065043]' },
   { name: 'WhatsApp Commerce', status: 'Active', color: 'bg-[#afefdd] text-[#065043]' },
-  { name: 'Payment Gateway', status: 'Connected', color: 'bg-[#afefdd] text-[#065043]' },
+  { name: 'Payment Integration', status: 'Connected', color: 'bg-[#afefdd] text-[#065043]' },
   { name: 'Business Workflows', status: 'Active', color: 'bg-[#afefdd] text-[#065043]' },
 ];
 
@@ -187,10 +187,10 @@ export default function ClientPortalPage() {
                 </div>
 
                 <div className="border-t border-[#efeded] pt-5">
-                  <p className="text-xs font-semibold text-[#707975] uppercase tracking-wider mb-3">Payment Summary</p>
+                  <p className="text-xs font-semibold text-[#707975] uppercase tracking-wider mb-3">Payment Activity</p>
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-[#3f4945]">This Month (Collected)</span>
+                      <span className="text-xs text-[#3f4945]">This Month (Received)</span>
                       <span className="text-sm font-semibold text-[#00342b] font-[Geist,sans-serif]">TZS 12.4M</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -198,13 +198,13 @@ export default function ClientPortalPage() {
                       <span className="text-sm font-semibold text-[#1b1c1c] font-[Geist,sans-serif]">TZS 9.8M</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-[#3f4945]">Settled to You</span>
-                      <span className="text-sm font-semibold text-[#1b1c1c] font-[Geist,sans-serif]">TZS 12.4M</span>
+                      <span className="text-xs text-[#3f4945]">Settlement</span>
+                      <span className="text-sm font-semibold text-[#1b1c1c] font-[Geist,sans-serif]">Direct to Merchant</span>
                     </div>
                   </div>
                   <div className="mt-3 flex items-start gap-2 bg-[#afefdd]/20 p-3">
                     <AlertCircle size={13} className="text-[#065043] mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-[#065043] leading-relaxed">Collections are reconciled and settled to your verified merchant account by BizLink Africa, according to agreed terms and schedules.</p>
+                    <p className="text-[11px] text-[#065043] leading-relaxed">Payments are settled directly to your verified merchant account by your approved payment partner. BizLink Africa does not receive, hold or control merchant funds.</p>
                   </div>
                 </div>
 

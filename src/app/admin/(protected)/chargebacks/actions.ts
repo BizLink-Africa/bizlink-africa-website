@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/supabase/dal';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/audit';
 import { isValidMoneyString } from '@/lib/collections/money';
+import { assertArchivedFinancialPrototypeReadOnly } from '@/lib/archived-financial-prototype';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -27,6 +28,11 @@ export async function openChargebackCase(
   reason: string,
   evidenceDueAt: string | null
 ): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.manage');
@@ -67,6 +73,11 @@ export async function openChargebackCase(
 }
 
 export async function requestChargebackEvidence(caseId: string, evidenceDueAt: string | null): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.manage');
@@ -87,6 +98,11 @@ export async function requestChargebackEvidence(caseId: string, evidenceDueAt: s
 }
 
 export async function submitChargebackEvidence(caseId: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.manage');
@@ -107,6 +123,11 @@ export async function submitChargebackEvidence(caseId: string): Promise<ActionRe
 }
 
 export async function upsertEvidenceItem(caseId: string, evidenceType: string, status: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.manage');
@@ -145,6 +166,11 @@ export async function upsertEvidenceItem(caseId: string, evidenceType: string, s
 }
 
 export async function beginChargebackReview(caseId: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.resolve');
@@ -165,6 +191,11 @@ export async function beginChargebackReview(caseId: string): Promise<ActionResul
 }
 
 export async function resolveChargebackCase(caseId: string, outcome: 'won' | 'lost' | 'withdrawn', notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.resolve');
@@ -189,6 +220,11 @@ export async function resolveChargebackCase(caseId: string, outcome: 'won' | 'lo
 }
 
 export async function closeChargebackCase(caseId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.resolve');
@@ -217,6 +253,11 @@ export async function recordChargebackRecovery(
   recoveryMethod: string,
   notes: string
 ): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('chargebacks.manage');
@@ -225,6 +266,12 @@ export async function recordChargebackRecovery(
   }
   if (!isValidMoneyString(recoveryAmount)) {
     return { success: false, message: 'Invalid recovery amount.' };
+  }
+  if (recoveryMethod === 'settlement_deduction') {
+    return {
+      success: false,
+      message: 'Settlement deduction is no longer a valid recovery method. BizLink Africa does not receive, hold or settle merchant funds.',
+    };
   }
 
   const supabase = await createClient();
@@ -263,6 +310,11 @@ export async function placeSettlementHold(
   holdAmount: string,
   expiresAt: string | null
 ): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('holds.manage');
@@ -304,6 +356,11 @@ export async function placeSettlementHold(
 }
 
 export async function requestSettlementHoldRelease(holdId: string, reason: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('holds.manage');
@@ -328,6 +385,11 @@ export async function requestSettlementHoldRelease(holdId: string, reason: strin
 }
 
 export async function approveSettlementHoldRelease(holdId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('holds.approve');
@@ -349,6 +411,11 @@ export async function approveSettlementHoldRelease(holdId: string, notes: string
 }
 
 export async function rejectSettlementHoldRelease(holdId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('holds.approve');
@@ -379,6 +446,11 @@ export async function requestManualReversal(
   reason: string,
   linkedChargebackCaseId: string | null
 ): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('reversals.manage');
@@ -418,6 +490,11 @@ export async function requestManualReversal(
 }
 
 export async function approveManualReversal(requestId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('reversals.approve');
@@ -438,6 +515,11 @@ export async function approveManualReversal(requestId: string, notes: string): P
 }
 
 export async function rejectManualReversal(requestId: string, notes: string): Promise<ActionResult> {
+  try {
+    await assertArchivedFinancialPrototypeReadOnly();
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
   let user;
   try {
     user = await requirePermission('reversals.approve');

@@ -213,7 +213,7 @@ describe('AdminNav', () => {
         ['Solutions & Services', '/admin/services'],
         ['Proposals', '/admin/crm/proposals'],
         ['Sales Pipeline', '/admin/crm/pipeline'],
-        ['Follow-ups', '/admin/crm/follow-ups'],
+        ['Follow-Ups', '/admin/crm/follow-ups'],
         ['Client Contacts', '/admin/crm/contacts'],
         ['CRM Reports', '/admin/crm/reports'],
       ];

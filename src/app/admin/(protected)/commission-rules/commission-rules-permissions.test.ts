@@ -4,55 +4,44 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NAV_GROUPS } from '@/data/navigation';
 
-// Same guarantee as the sibling per-module tests (e.g. Merchant Operations'
-// merchant-operations-permissions.test.ts): the sidebar (navigation.ts)
-// declares which permission gates each Commission & Fee Rules route, and
-// each page.tsx independently calls requirePermission() to actually
-// enforce it. Fails loudly if a route is ever added to the sidebar without
-// a matching requirePermission() call in its page.tsx.
-describe('Commission & Fee Rules — sidebar permission matches page enforcement', () => {
-  const group = NAV_GROUPS.find((g) => g.label === 'Commission & Fee Rules');
-  if (!group) throw new Error('Commission & Fee Rules group not found in navigation.ts');
+// Commission & Fee Rules modeled BizLink as the party deducting a
+// commission/fee from merchant collections. BizLink Africa does not
+// receive, hold, reconcile, disburse or settle merchant funds, so this
+// group was removed from active navigation and its routes are now gated
+// Super Admin only behind the archived-financial-prototype layout — see
+// navigation.ts and src/lib/archived-financial-prototype.ts. Nothing was
+// deleted: every page.tsx still independently enforces its original
+// requirePermission() call, and the underlying DB grants (e.g. cfo holding
+// commission_rules.view) were never revoked.
+describe('Commission & Fee Rules — dissolved group, routes archived and Super-Admin gated', () => {
+  it('is no longer present in NAV_GROUPS (stays caught if someone re-adds it without going through the archival process)', () => {
+    const group = NAV_GROUPS.find((g) => g.label === 'Commission & Fee Rules');
+    expect(group).toBeUndefined();
+  });
 
-  const routeToPageFile: Record<string, string> = {
-    '/admin/commission-rules': 'page.tsx',
-    '/admin/commission-rules/pending': 'pending/page.tsx',
-    '/admin/commission-rules/history': 'history/page.tsx',
-    '/admin/commission-rules/preview': 'preview/page.tsx',
-  };
-
-  // "New Rule" and "Scheduled Rules" are no longer sidebar entries (see
-  // navigation.ts) but the routes/pages still exist and must keep
-  // independently enforcing their permission.
-  const droppedFromNavButStillEnforced: Record<string, string> = {
+  // Every route that used to be in the sidebar (plus the two that were
+  // already dropped from nav before this) must still independently enforce
+  // its permission — only the sidebar link and the reachability of the
+  // module changed.
+  const pageFileToPermission: Record<string, string> = {
+    'page.tsx': 'commission_rules.view',
+    'pending/page.tsx': 'commission_rules.approve',
+    'history/page.tsx': 'commission_rules.view',
+    'preview/page.tsx': 'commission_rules.view',
     'new/page.tsx': 'commission_rules.manage',
     'scheduled/page.tsx': 'commission_rules.view',
+    '[id]/page.tsx': 'commission_rules.view',
   };
-  for (const [relativePath, permission] of Object.entries(droppedFromNavButStillEnforced)) {
-    it(`${relativePath} (not in sidebar, but route still exists) requires '${permission}'`, () => {
+  for (const [relativePath, permission] of Object.entries(pageFileToPermission)) {
+    it(`${relativePath} still requires '${permission}', even though the module is no longer linked from the sidebar`, () => {
       const source = readFileSync(join(__dirname, relativePath), 'utf8');
       expect(source).toContain(`requirePermission('${permission}')`);
     });
   }
 
-  it('covers every Commission & Fee Rules nav item (no route was added to the sidebar without an entry here)', () => {
-    for (const item of group.items) {
-      expect(routeToPageFile[item.href], `no known page file mapped for ${item.href}`).toBeDefined();
-    }
-    expect(Object.keys(routeToPageFile)).toHaveLength(group.items.length);
-  });
-
-  for (const item of group.items) {
-    it(`${item.label} (${item.href}) page.tsx requires '${item.permission}'`, () => {
-      const relativePath = routeToPageFile[item.href];
-      const source = readFileSync(join(__dirname, relativePath), 'utf8');
-      expect(source).toContain(`requirePermission('${item.permission}')`);
-    });
-  }
-
-  it('the rule detail page requires commission_rules.view', () => {
-    const source = readFileSync(join(__dirname, '[id]/page.tsx'), 'utf8');
-    expect(source).toContain(`requirePermission('commission_rules.view')`);
+  it('layout.tsx wires up the archived-prototype access gate (Super Admin only)', () => {
+    const source = readFileSync(join(__dirname, 'layout.tsx'), 'utf8');
+    expect(source).toContain('checkArchivedFinancialPrototypeAccess');
   });
 
   it('is only ever granted to super_admin and cfo in the migration (Super Admin / authorised Finance only)', () => {
