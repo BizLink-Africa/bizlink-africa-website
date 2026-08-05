@@ -1,7 +1,7 @@
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Our Solutions', href: '/solutions' },
-  { label: 'Partnership Approach', href: '/partnership' },
+  { label: 'Partnership Approach', href: '/partnership-approach' },
   { label: 'Client Portal', href: '/client-portal' },
   { label: 'Contact Us', href: '/contact' },
 ];

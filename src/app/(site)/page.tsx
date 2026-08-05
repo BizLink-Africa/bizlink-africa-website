@@ -241,7 +241,7 @@ export default function HomePage() {
             })}
           </div>
           <div className="mt-10 text-center">
-            <CTAButton href="/partnership" variant="white">Learn Our Approach</CTAButton>
+            <CTAButton href="/partnership-approach" variant="white">Learn Our Approach</CTAButton>
           </div>
         </div>
       </section>

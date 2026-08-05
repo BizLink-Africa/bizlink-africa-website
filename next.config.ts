@@ -81,6 +81,11 @@ const nextConfig: NextConfig = {
         destination: 'https://bizlinkafrica.net/:path*',
         permanent: true,
       },
+      {
+        source: '/partnership',
+        destination: '/partnership-approach',
+        permanent: true,
+      },
     ];
   },
 };
