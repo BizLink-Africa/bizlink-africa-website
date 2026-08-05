@@ -5,9 +5,41 @@ import CTAButton from '@/components/website/CTAButton';
 import ComplianceCard from '@/components/website/ComplianceCard';
 import { PARTNERSHIP_FEATURES } from '@/data/website';
 
+const BASE_URL = 'https://bizlinkafrica.net';
+const PAGE_TITLE = 'Partnership Approach';
+const PAGE_DESCRIPTION = 'Learn how BizLink Africa coordinates merchant onboarding and payment-technology integration through approved payment partners, with direct merchant settlement and no BizLink custody of funds.';
+const PAGE_PATH = '/partnership-approach';
+
 export const metadata: Metadata = {
-  title: 'Partnership Approach',
-  description: 'Learn how BizLink Africa coordinates merchant onboarding and payment-technology integration through approved payment partners, with direct merchant settlement and no BizLink custody of funds.',
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  alternates: {
+    canonical: PAGE_PATH,
+  },
+  openGraph: {
+    title: `${PAGE_TITLE} | BizLink Africa Limited`,
+    description: PAGE_DESCRIPTION,
+    url: PAGE_PATH,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${PAGE_TITLE} | BizLink Africa Limited`,
+    description: PAGE_DESCRIPTION,
+  },
+};
+
+const partnershipJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  url: `${BASE_URL}${PAGE_PATH}`,
+  isPartOf: {
+    '@type': 'Organization',
+    name: 'BizLink Africa Limited',
+    url: BASE_URL,
+  },
 };
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -35,6 +67,11 @@ const HOW_IT_WORKS = [
 export default function PartnershipPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(partnershipJsonLd) }}
+      />
+
       {/* ── HERO ── */}
       <section className="relative overflow-hidden bg-[#00342b] py-24">
         <div
